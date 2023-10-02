@@ -192,3 +192,7 @@ Three possible ways (out of many) to generate the documentation:
 ## License
 
 [MIT](https://tldrlegal.com/license/mit-license)
+
+## Parking hub and SCALE-UP
+
+Parts of the Parkkihubi platform are being developed as part of European Union Horizon 2020 programme funded SCALE-UP project (grant agreement no. 955332).
