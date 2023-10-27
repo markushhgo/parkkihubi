@@ -4,9 +4,9 @@ from django.db import models
 
 from .admin_utils import ReadOnlyAdmin, WithAreaField
 from .models import (
-    ArchivedParking, EnforcementDomain, Enforcer, Monitor, Operator, Parking,
-    ParkingArea, ParkingCheck, ParkingTerminal, PaymentZone, Permit,
-    PermitArea, PermitLookupItem, PermitSeries, Region)
+    ArchivedParking, EnforcementDomain, Enforcer, EventArea, EventParking,
+    Monitor, Operator, Parking, ParkingArea, ParkingCheck, ParkingTerminal,
+    PaymentZone, Permit, PermitArea, PermitLookupItem, PermitSeries, Region)
 
 
 @admin.register(Enforcer)
@@ -64,6 +64,27 @@ class ParkingAreaAdmin(WithAreaField, OSMGeoAdmin):
     list_display = ['id', 'origin_id', 'domain', 'capacity_estimate', 'area']
     list_filter = ['domain']
     ordering = ('origin_id',)
+
+
+@admin.register(EventArea)
+class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
+    area_scale = 1
+    list_display = ['id', 'origin_id', 'domain', 'event_start',
+                    'event_end', 'capacity_estimate', 'estimated_capacity', 'area']
+    list_filter = ['domain']
+    ordering = ('origin_id',)
+
+
+@admin.register(EventParking)
+class EventParkingAdmin(OSMGeoAdmin):
+    date_hierarchy = 'time_start'
+    list_display = [
+        'id', 'operator', 'domain', 'event_area',
+        'time_start', 'time_end', 'registration_number',
+        'created_at', 'modified_at']
+    list_filter = ['operator', 'domain', 'event_area']
+    ordering = ('-time_start',)
+    search_fields = ['registration_number']
 
 
 @admin.register(ParkingCheck)
