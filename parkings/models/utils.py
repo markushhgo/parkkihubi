@@ -3,6 +3,12 @@ from django.contrib.gis.db.models.functions import Distance
 from .parking_area import ParkingArea
 
 
+def normalize_reg_num(registration_number):
+    if not registration_number:
+        return ''
+    return registration_number.upper().replace('-', '').replace(' ', '')
+
+
 def get_closest_area(location, domain, max_distance=50, area_model=ParkingArea):
     if not location:
         return None
