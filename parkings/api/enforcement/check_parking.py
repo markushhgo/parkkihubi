@@ -8,7 +8,8 @@ from rest_framework import generics, serializers
 from rest_framework.response import Response
 
 from ...models import (
-    Parking, ParkingCheck, PaymentZone, PermitArea, PermitLookupItem)
+    EventParking, Parking, ParkingCheck, PaymentZone, PermitArea,
+    PermitLookupItem)
 from ...models.constants import GK25FIN_SRID, WGS84_SRID
 from .permissions import IsEnforcer
 
@@ -41,6 +42,7 @@ class CheckParking(generics.GenericAPIView):
     Check if parking is valid for given registration number and location.
     """
     permission_classes = [IsEnforcer]
+
     serializer_class = CheckParkingSerializer
 
     def post(self, request):
@@ -54,7 +56,6 @@ class CheckParking(generics.GenericAPIView):
         time = params.get("time") or timezone.now()
         registration_number = params.get("registration_number")
         (wgs84_location, gk25_location) = get_location(params)
-
         domain = request.user.enforcer.enforced_domain
 
         zone = get_payment_zone(gk25_location, domain)
@@ -82,18 +83,21 @@ class CheckParking(generics.GenericAPIView):
             },
             "time": time,
         }
+        filter = {
+            "performer": request.user,
+            "time": time,
+            "time_overridden": bool(params.get("time")),
+            "registration_number": registration_number,
+            "location": wgs84_location,
+            "result": result,
+            "allowed": allowed
+        }
+        if isinstance(parking, Parking):
+            filter["found_parking"] = parking
+        if isinstance(parking, EventParking):
+            filter["found_event_parking"] = parking
 
-        ParkingCheck.objects.create(
-            performer=request.user,
-            time=time,
-            time_overridden=bool(params.get("time")),
-            registration_number=registration_number,
-            location=wgs84_location,
-            result=result,
-            allowed=allowed,
-            found_parking=parking,
-        )
-
+        ParkingCheck.objects.create(**filter)
         return Response(result)
 
 
@@ -128,6 +132,13 @@ def get_permit_area(location, domain):
     area = PermitArea.objects.filter(geom__contains=location, domain=domain).first()
     return area if area else None
 
+# def get_event_area(location, domain):
+#     if location is None:
+#         return None
+#     now = timezone.now()
+#     area = EventArea.objects.filter(geom__contains=location, domain=domain, time_end__gte=now).first()
+#     return area if area else None
+
 
 def check_parking(registration_number, zone, area, time, domain):
     """
@@ -146,6 +157,7 @@ def check_parking(registration_number, zone, area, time, domain):
         .valid_at(time)
         .only("id", "zone", "time_end")
         .filter(domain=domain))
+
     for parking in active_parkings:
         if zone is None or parking.zone.number <= zone:
             return ("parking", parking, parking.time_end)
@@ -163,6 +175,16 @@ def check_parking(registration_number, zone, area, time, domain):
 
         if permit_end_time:
             return ("permit", None, permit_end_time)
+
+    active_event_parking = (
+        EventParking.objects
+        .registration_number_like(registration_number)
+        .valid_at(time)
+        .only("id", "time_end")
+        .filter(domain=domain)).first()
+
+    if active_event_parking:
+        return ("event parking", active_event_parking, active_event_parking.time_end)
 
     return (None, None, None)
 
