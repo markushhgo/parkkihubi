@@ -69,8 +69,8 @@ class ParkingAreaAdmin(WithAreaField, OSMGeoAdmin):
 @admin.register(EventArea)
 class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     area_scale = 1
-    list_display = ['id', 'origin_id', 'domain', 'event_start',
-                    'event_end', 'capacity_estimate', 'estimated_capacity', 'area']
+    list_display = ['id', 'origin_id', 'domain', 'event_start', 'event_end',
+                    'capacity_estimate', 'estimated_capacity', 'area', 'parking_areas']
     list_filter = ['domain']
     ordering = ('origin_id',)
 
@@ -91,7 +91,9 @@ class EventParkingAdmin(OSMGeoAdmin):
 class ParkingCheckAdmin(ReadOnlyAdmin, OSMGeoAdmin):
     list_display = [
         'id', 'time', 'registration_number', 'location',
-        'allowed', 'result', 'performer', 'created_at']
+        'allowed', 'result', 'performer', 'created_at',
+        'found_parking', 'found_event_parking'
+    ]
 
     modifiable = False
 
