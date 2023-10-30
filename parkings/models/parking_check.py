@@ -6,6 +6,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .constants import WGS84_SRID
+from .event_parking import EventParking
 from .mixins import AnonymizableRegNumQuerySet
 from .parking import Parking
 
@@ -47,6 +48,9 @@ class ParkingCheck(models.Model):
     found_parking = models.ForeignKey(
         Parking, on_delete=models.SET_NULL,
         null=True, blank=True, verbose_name=_("found parking"))
+    found_event_parking = models.ForeignKey(
+        EventParking, on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name=_("found event parking"))
 
     objects = ParkingCheckQuerySet.as_manager()
 
