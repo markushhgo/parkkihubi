@@ -14,7 +14,7 @@ from ..validators import DictListValidator, TextField, TimestampField
 from .constants import GK25FIN_SRID
 from .enforcement_domain import EnforcementDomain
 from .mixins import AnonymizableRegNumQuerySet, TimestampedModelMixin
-from .parking import Parking
+from .utils import normalize_reg_num
 
 
 class PermitArea(TimestampedModelMixin):
@@ -300,7 +300,7 @@ class Permit(TimestampedModelMixin, models.Model):
                     permit=self,
                     subject_item=subject_item,
                     area_item=area_item,
-                    registration_number=Parking.normalize_reg_num(
+                    registration_number=normalize_reg_num(
                         subject_item.registration_number),
                     area=area_item.area,
                     start_time=start_time,
@@ -352,7 +352,7 @@ class PermitLookupItemQuerySet(AnonymizableRegNumQuerySet, models.QuerySet):
         return self.filter(start_time__lte=timestamp, end_time__gte=timestamp)
 
     def by_subject(self, registration_number):
-        normalized_reg_num = Parking.normalize_reg_num(registration_number)
+        normalized_reg_num = normalize_reg_num(registration_number)
         return self.filter(registration_number=normalized_reg_num)
 
     def by_area(self, area):
