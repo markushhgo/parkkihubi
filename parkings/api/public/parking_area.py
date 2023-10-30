@@ -1,26 +1,16 @@
 from rest_framework import permissions, viewsets
 from rest_framework_gis.pagination import GeoJsonPagination
-from rest_framework_gis.serializers import (
-    GeoFeatureModelSerializer, GeometrySerializerMethodField)
 
 from parkings.models import ParkingArea
 
 from ..common import WGS84InBBoxFilter
+from .event_area import AreaSerializer
 
 
-class ParkingAreaSerializer(GeoFeatureModelSerializer):
-    wgs84_areas = GeometrySerializerMethodField()
+class ParkingAreaSerializer(AreaSerializer):
 
-    def get_wgs84_areas(self, area):
-        return area.geom.transform(4326, clone=True)
-
-    class Meta:
+    class Meta(AreaSerializer.Meta):
         model = ParkingArea
-        geo_field = 'wgs84_areas'
-        fields = (
-            'id',
-            'capacity_estimate',
-        )
 
 
 class PublicAPIParkingAreaViewSet(viewsets.ReadOnlyModelViewSet):
