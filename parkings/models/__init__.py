@@ -1,4 +1,6 @@
 from .enforcement_domain import EnforcementDomain, Enforcer
+from .event_area import EventArea
+from .event_parking import EventParking
 from .monitor import Monitor
 from .operator import Operator
 from .parking import ArchivedParking, Parking, ParkingQuerySet
@@ -15,6 +17,8 @@ __all__ = [
     'ArchivedParking',
     'EnforcementDomain',
     'Enforcer',
+    'EventArea',
+    'EventParking',
     'Monitor',
     'Operator',
     'Parking',
