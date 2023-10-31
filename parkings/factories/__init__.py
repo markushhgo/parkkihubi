@@ -1,6 +1,6 @@
 from .enforcement_domain import EnforcementDomainFactory, EnforcerFactory
 from .event_area import EventAreaFactory
-from .event_parking import EventParkingFactory
+from .event_parking import CompleteEventParkingFactory, EventParkingFactory
 from .monitor import MonitorFactory
 from .operator import OperatorFactory  # noqa
 from .parking import (  # noqa
@@ -15,6 +15,7 @@ from .user import AdminUserFactory, StaffUserFactory, UserFactory  # noqa
 __all__ = [
     'AdminUserFactory',
     'ArchivedParkingFactory',
+    'CompleteEventParkingFactory',
     'CompleteHistoryParkingFactory',
     'CompleteParkingFactory',
     'DiscParkingFactory',
