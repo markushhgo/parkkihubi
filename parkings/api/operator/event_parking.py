@@ -4,7 +4,7 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import mixins, serializers, viewsets
 
-from parkings.models import EnforcementDomain, EventParking
+from parkings.models import EnforcementDomain, EventArea, EventParking
 
 from ..common import ParkingException
 from .permissions import IsOperator
@@ -17,6 +17,7 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
     domain = serializers.SlugRelatedField(
         slug_field='code', queryset=EnforcementDomain.objects.all(),
         default=EnforcementDomain.get_default_domain)
+    event_area_id = serializers.CharField(max_length=50, required=False)
 
     class Meta:
         model = EventParking
@@ -27,7 +28,7 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
             'time_start', 'time_end',
             'status',
             'domain',
-            'event_area',
+            'event_area_id',
         )
 
         # these are needed because by default a PUT request that does not contain some optional field
@@ -66,8 +67,20 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
 
         if time_end is not None and time_start > time_end:
             raise serializers.ValidationError(_('"time_start" cannot be after "time_end".'))
-
+        if data.get('event_area_id', False):
+            if not EventArea.objects.filter(id=data.get('event_area_id')).exists():
+                raise serializers.ValidationError(
+                    _('EventArea with event_area_id: {} does not exist.').format(data.get('event_area_id')))
         return data
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        field = 'event_area'
+        if getattr(instance, field) is not None:
+            representation['event_area_id'] = getattr(instance, field).id
+        else:
+            representation['event_area_id'] is None
+        return representation
 
 
 class OperatorAPIEventParkingPermission(IsOperator):
