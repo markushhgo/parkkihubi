@@ -46,7 +46,7 @@ def check_response_data(posted_data, response_data):
         'id', 'registration_number',
         'time_start', 'time_end',
         'location', 'created_at', 'modified_at',
-        'status', 'domain',
+        'status', 'event_area_id', 'domain',
     }
 
     posted_data_keys = set(posted_data)
@@ -96,6 +96,35 @@ def test_event_parking_required_fields(operator_api_client, event_parking):
     check_required_fields(operator_api_client, list_url, expected_required_fields)
     check_required_fields(operator_api_client, get_detail_url(event_parking),
                           expected_required_fields, detail_endpoint=True)
+
+
+def test_post_event_parking_with_event_area_id(operator_api_client, new_event_parking_data, event_area_factory):
+    event_area = event_area_factory()
+    new_event_parking_data['event_area_id'] = str(event_area.id)
+    response_data = post(operator_api_client, list_url, new_event_parking_data)
+    check_response_data(new_event_parking_data, response_data)
+    new_event_parking = EventParking.objects.get(id=response_data['id'])
+    check_data_matches_object(new_event_parking_data, new_event_parking)
+    assert response_data['event_area_id'] == new_event_parking_data['event_area_id']
+
+
+def test_post_event_parking_with_non_existing_event_area_id(operator_api_client, new_event_parking_data):
+    new_event_parking_data['event_area_id'] = '5097a7b1-2bf1-4a69-be8a-669f300d993e'
+    post(operator_api_client, list_url, new_event_parking_data, 400)
+
+
+def test_patch_event_parking_event_area_id(operator_api_client, complete_event_parking, event_area_factory):
+    detail_url = get_detail_url(complete_event_parking)
+    event_area = event_area_factory()
+    new_event_area_id = str(event_area.id)
+    response_data = patch(operator_api_client, detail_url, {'event_area_id': new_event_area_id})
+
+    # # check data in the response
+    check_response_data({'event_area_id': new_event_area_id}, response_data)
+
+    # # check the actual object
+    complete_event_parking.refresh_from_db()
+    assert str(complete_event_parking.event_area.id) == new_event_area_id
 
 
 def test_post_event_parking(operator_api_client, new_event_parking_data):
