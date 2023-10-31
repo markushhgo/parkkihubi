@@ -7,6 +7,7 @@ from django.utils.timezone import now, utc
 
 from parkings.factories.parking import create_payment_zone
 from parkings.models import Operator, Parking, ParkingCheck, ParkingTerminal
+from parkings.models.utils import normalize_reg_num
 
 
 def test_operator_instance_creation():
@@ -163,7 +164,7 @@ def test_normalized_reg_num(admin_user, reg_num, normalized, enforcer):
     ('123--ABC', '123ABC'),
 ])
 def test_normalize_reg_num_function(reg_num, result):
-    assert Parking.normalize_reg_num(reg_num) == result
+    assert normalize_reg_num(reg_num) == result
 
 
 @pytest.mark.django_db
