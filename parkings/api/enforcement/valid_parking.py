@@ -1,5 +1,3 @@
-import datetime
-
 import django_filters
 from django.conf import settings
 from django.utils import timezone
@@ -8,13 +6,14 @@ from rest_framework import serializers, viewsets
 
 from ...models import Parking
 from .permissions import IsEnforcer
+from .utils import get_grace_duration
 
 
-class ValidParkingSerializer(serializers.ModelSerializer):
+class ValidSerializer(serializers.ModelSerializer):
     operator_name = serializers.CharField(source='operator.name')
 
     class Meta:
-        model = Parking
+        abstract = True
         fields = [
             'id',
             'created_at',
@@ -22,9 +21,26 @@ class ValidParkingSerializer(serializers.ModelSerializer):
             'registration_number',
             'time_start',
             'time_end',
-            'zone',
             'operator',
             'operator_name',
+        ]
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.time_end is None:
+            replacement_value = getattr(
+                settings, 'PARKKIHUBI_NONE_END_TIME_REPLACEMENT', None)
+            representation['time_end'] = replacement_value or None
+
+        return representation
+
+
+class ValidParkingSerializer(ValidSerializer):
+
+    class Meta(ValidSerializer.Meta):
+        model = Parking
+        fields = ValidSerializer.Meta.fields + [
+            'zone',
             'is_disc_parking',
         ]
 
@@ -37,23 +53,17 @@ class ValidParkingSerializer(serializers.ModelSerializer):
         if not instance.is_disc_parking:
             representation.pop('is_disc_parking')
 
-        if instance.time_end is None:
-            replacement_value = getattr(
-                settings, 'PARKKIHUBI_NONE_END_TIME_REPLACEMENT', None)
-            representation['time_end'] = replacement_value or None
-
         return representation
 
 
-class ValidParkingFilter(django_filters.rest_framework.FilterSet):
+class ValidFilter(django_filters.rest_framework.FilterSet):
     reg_num = django_filters.CharFilter(
         label=_("Registration number"), method='filter_reg_num')
     time = django_filters.IsoDateTimeFilter(
         label=_("Time"), method='filter_time')
 
     class Meta:
-        model = Parking
-        fields = []
+        abstract = True
 
     def __init__(self, data=None, *args, **kwargs):
         """
@@ -67,7 +77,7 @@ class ValidParkingFilter(django_filters.rest_framework.FilterSet):
         super().__init__(data, *args, **kwargs)
 
     def is_valid(self):
-        super(ValidParkingFilter, self).is_valid()
+        super(ValidFilter, self).is_valid()
         if not self.request.query_params.get("reg_num") and not self.request.query_params.get("time"):
             raise serializers.ValidationError(_("Either time or registration number required."))
         return True
@@ -95,11 +105,18 @@ class ValidParkingFilter(django_filters.rest_framework.FilterSet):
         return valid_parkings
 
 
-class ValidParkingViewSet(viewsets.ReadOnlyModelViewSet):
+class ValidParkingFilter(ValidFilter):
+
+    class Meta:
+        model = Parking
+        fields = []
+
+
+class ValidViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsEnforcer]
-    queryset = Parking.objects.order_by('-time_end')
-    serializer_class = ValidParkingSerializer
-    filterset_class = ValidParkingFilter
+
+    class Meta:
+        abstract = True
 
     def filter_queryset(self, queryset):
         """
@@ -150,7 +167,7 @@ class ValidParkingViewSet(viewsets.ReadOnlyModelViewSet):
         return super().get_queryset().filter(domain=self.request.user.enforcer.enforced_domain)
 
 
-def get_grace_duration(default=datetime.timedelta(minutes=15)):
-    value = getattr(settings, 'PARKKIHUBI_TIME_OLD_PARKINGS_VISIBLE', None)
-    assert value is None or isinstance(value, datetime.timedelta)
-    return value if value is not None else default
+class ValidParkingViewSet(ValidViewSet):
+    queryset = Parking.objects.order_by('-time_end')
+    serializer_class = ValidParkingSerializer
+    filterset_class = ValidParkingFilter
