@@ -70,9 +70,12 @@ class ParkingAreaAdmin(WithAreaField, OSMGeoAdmin):
 class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     area_scale = 1
     list_display = ['id', 'origin_id', 'domain', 'event_start', 'event_end',
-                    'capacity_estimate', 'estimated_capacity', 'area', 'parking_areas']
+                    'capacity_estimate', 'estimated_capacity', 'area', 'get_parking_areas']
     list_filter = ['domain']
     ordering = ('origin_id',)
+
+    def get_parking_areas(self, obj):
+        return '\n'.join(p.name for p in obj.parking_areas.all())
 
 
 @admin.register(EventParking)
