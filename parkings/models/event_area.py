@@ -19,9 +19,10 @@ class EventArea(AbstractParkingArea):
     event_end = models.DateTimeField(
         verbose_name=_("event end time"), db_index=True, null=True, blank=True,
     )
-    parking_areas = models.ForeignKey(
-        ParkingArea, null=True, blank=True, on_delete=models.SET_NULL,
-        verbose_name=_("overlapping parking areas"), related_name="event_areas")
+    parking_areas = models.ManyToManyField(
+        ParkingArea, verbose_name=_("overlapping parking areas"), blank=True,
+        related_name="overlapping_event_areas",
+    )
 
     objects = EventAreaQuerySet.as_manager()
 
@@ -31,6 +32,9 @@ class EventArea(AbstractParkingArea):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
+        for parking_area in ParkingArea.objects.all():
+            if self.geom.intersects(parking_area.geom):
+                self.parking_areas.add(parking_area)
 
     def __str__(self):
         return 'Event Area %s' % str(self.origin_id)
