@@ -77,6 +77,12 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     def get_parking_areas(self, obj):
         return '\n'.join(p.name for p in obj.parking_areas.all())
 
+    def save_related(self, request, form, formsets, change):
+        super(EventAreaAdmin, self).save_related(request, form, formsets, change)
+        for parking_area in ParkingArea.objects.all():
+            if form.instance.geom.intersects(parking_area.geom):
+                form.instance.parking_areas.add(parking_area)
+
 
 @admin.register(EventParking)
 class EventParkingAdmin(OSMGeoAdmin):
