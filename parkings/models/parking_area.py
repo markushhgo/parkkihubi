@@ -149,3 +149,10 @@ class ParkingArea(AbstractParkingArea):
 
     def __str__(self):
         return 'Parking Area %s' % str(self.origin_id)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from parkings.models.event_area import EventArea
+        for event_area in EventArea.objects.all():
+            if self.geom.intersects(event_area.geom):
+                event_area.parking_areas.add(self)
