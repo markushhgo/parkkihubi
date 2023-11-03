@@ -13,6 +13,12 @@ class EventParkingQuerySet(ParkingQuerySet):
 
 
 class EventParking(AbstractParking):
+
+    class Meta:
+        verbose_name = _("event parking")
+        verbose_name_plural = _("event parkings")
+        default_related_name = "event_parkings"
+
     objects = EventParkingQuerySet.as_manager()
     event_area = models.ForeignKey(
         EventArea, on_delete=models.SET_NULL, verbose_name=_("event area"), null=True,
