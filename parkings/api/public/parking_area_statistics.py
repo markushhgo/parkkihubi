@@ -1,4 +1,4 @@
-from django.db.models import Case, Count, Q, When
+from django.db.models import Case, Count, F, Q, When
 from django.utils import timezone
 from rest_framework import permissions, serializers, viewsets
 
@@ -43,13 +43,18 @@ class PublicAPIParkingAreaStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         now = timezone.now()
-
         return ParkingArea.objects.annotate(
             current_parking_count=Count(
                 Case(
                     When(
                         Q(parkings__time_start__lte=now) &
                         (Q(parkings__time_end__gte=now) | Q(parkings__time_end__isnull=True)),
+                        then=1,
+                    ),
+                    When(
+                        Q(overlapping_event_areas__event_parkings__time_start__lte=now) &
+                        Q(overlapping_event_areas__event_parkings__time_end__gte=now) &
+                        Q(geom__intersects=F("overlapping_event_areas__event_parkings__location")),
                         then=1,
                     )
                 )
