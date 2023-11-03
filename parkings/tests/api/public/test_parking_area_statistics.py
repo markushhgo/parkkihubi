@@ -3,8 +3,6 @@ from unittest.mock import patch
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.urls import reverse
 
-from parkings.models import Parking
-
 from ..utils import (
     check_list_endpoint_base_fields, check_method_status_codes, get,
     get_ids_from_results)
@@ -27,19 +25,19 @@ def test_list_endpoint_base_fields(api_client):
     check_list_endpoint_base_fields(stats_data)
 
 
-def test_get_list_check_data(api_client, parking_factory, parking_area_factory, history_parking_factory):
+def test_get_list_check_data(mocker, api_client, parking_factory, parking_area_factory, history_parking_factory):
     parking_area_1, parking_area_2, parking_area_3, parking_area_4 = parking_area_factory.create_batch(4)
 
-    with patch.object(Parking, 'get_closest_area', return_value=parking_area_1):
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area_1):
         parking_factory.create_batch(4)
 
-    with patch.object(Parking, 'get_closest_area', return_value=parking_area_2):
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area_2):
         parking_factory.create_batch(3)
 
-    with patch.object(Parking, 'get_closest_area', return_value=parking_area_3):
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area_3):
         history_parking_factory.create_batch(5)
 
-    with patch.object(Parking, 'get_closest_area', return_value=parking_area_4):
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area_4):
         history_parking_factory.create_batch(5, time_end=None)
 
     results = get(api_client, list_url)['results']
@@ -61,14 +59,14 @@ def test_get_list_check_data(api_client, parking_factory, parking_area_factory, 
 
 
 def test_get_detail_check_data(api_client, parking_factory, parking_area):
-    with patch.object(Parking, 'get_closest_area', return_value=parking_area):
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area):
         parking_factory.create_batch(3)
 
     stats_data = get(api_client, get_detail_url(parking_area))
     assert stats_data.keys() == {'id', 'current_parking_count'}
     assert stats_data['current_parking_count'] == 0
 
-    with patch.object(Parking, 'get_closest_area', return_value=parking_area):
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area):
         parking_factory()
 
     stats_data = get(api_client, get_detail_url(parking_area))
