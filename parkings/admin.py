@@ -94,7 +94,7 @@ class EventParkingAdmin(OSMGeoAdmin):
     list_filter = ['operator', 'domain', 'event_area']
     ordering = ('-time_start',)
     search_fields = ['registration_number']
-    exclude = ['location_gk25']
+    exclude = ['location_gk25fin']
 
 
 @admin.register(ParkingCheck)
