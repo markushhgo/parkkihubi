@@ -1,17 +1,125 @@
+from datetime import timedelta
 from unittest.mock import patch
 
-from django.contrib.gis.geos import MultiPolygon, Polygon
+from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 from django.urls import reverse
+from django.utils import timezone
 
+from parkings.models import EventArea, EventParking, ParkingArea
+
+from ..enforcement.test_check_parking import create_area_geom
 from ..utils import (
     check_list_endpoint_base_fields, check_method_status_codes, get,
     get_ids_from_results)
 
 list_url = reverse('public:v1:parkingareastatistics-list')
 
+GEOM_CENTER = [
+    (22.0, 60.5),  # North West corner
+    (22.5, 60.5),  # North East corner
+    (22.5, 60.0),  # South East corner
+    (22.0, 60.0),  # South West corner
+]
+
+GEOM_PARTIAL_OVERLAP_ON_WEST = [
+    (21.8, 60.5),  # North West corner
+    (22.25, 60.5),  # North East corner
+    (22.25, 60.0),  # South East corner
+    (21.8, 60.0),  # South West corner
+]
+
+
+def create_event_area(origin_id, domain, geom, event_start, event_end):
+    return EventArea.objects.create(
+        origin_id=origin_id,
+        domain=domain,
+        geom=create_area_geom(geom=geom),
+        event_start=event_start,
+        event_end=event_end,
+    )
+
+
+def create_parking_area(origin_id, domain, geom):
+    return ParkingArea.objects.create(
+        origin_id=origin_id,
+        domain=domain,
+        geom=create_area_geom(geom=geom)
+    )
+
+
+def create_event_parking(location, operator, domain, time_start, time_end):
+    return EventParking.objects.create(
+        location=location,
+        operator=operator,
+        domain=domain,
+        time_start=time_start,
+        time_end=time_end
+    )
+
 
 def get_detail_url(obj):
     return reverse('public:v1:parkingareastatistics-detail', kwargs={'pk': obj.pk})
+
+
+def find_by_obj_id(obj, iterable):
+    return [x for x in iterable if x['id'] == str(obj.id)][0]
+
+
+def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator):
+    parking_area = create_parking_area("center", enforcer.enforced_domain, GEOM_CENTER,)
+    results = get(api_client, list_url)['results']
+    stats_data = find_by_obj_id(parking_area, results)
+    assert stats_data['current_parking_count'] == 0
+
+    with patch('parkings.models.parking.get_closest_area', return_value=parking_area):
+        parking_factory.create_batch(4)
+
+    results = get(api_client, list_url)['results']
+    stats_data = find_by_obj_id(parking_area, results)
+    assert stats_data['current_parking_count'] == 4
+
+    now = timezone.now()
+    event_area = create_event_area("center", enforcer.enforced_domain, GEOM_CENTER,
+                                   now - timedelta(hours=2), now + timedelta(hours=2))
+    assert event_area.parking_areas.first() == parking_area
+    assert parking_area.overlapping_event_areas.first() == event_area
+    centroid = event_area.geom.centroid.transform(4326, clone=True)
+    location = Point(centroid.x, centroid.y)
+    event_parking = create_event_parking(location, operator, enforcer.enforced_domain,
+                                         now - timedelta(hours=2), now + timedelta(hours=2))
+    event_parking.event_area = event_area
+    event_parking.save()
+    results = get(api_client, list_url)['results']
+    stats_data = find_by_obj_id(parking_area, results)
+    assert stats_data['current_parking_count'] == 5
+    event_area_west = create_event_area("west", enforcer.enforced_domain,
+                                        GEOM_PARTIAL_OVERLAP_ON_WEST, now - timedelta(hours=2),
+                                        now + timedelta(hours=2))
+    assert event_area.parking_areas.first() == parking_area
+    ids = EventArea.objects.all().values_list("id", flat=True)
+    assert ParkingArea.objects.filter(overlapping_event_areas__in=ids).count() == 2
+
+    centroid = event_area_west.geom.centroid.transform(4326, clone=True)
+    location = Point(centroid.x, centroid.y)
+    for i in range(5):
+        event_parking = create_event_parking(location, operator, enforcer.enforced_domain,
+                                             now - timedelta(hours=2), now + timedelta(hours=2))
+        event_parking.event_area = event_area_west
+        event_parking.save()
+    results = get(api_client, list_url)['results']
+    stats_data = find_by_obj_id(parking_area, results)
+    assert stats_data['current_parking_count'] == 10
+
+    # Test event parkings that are in overlapping event area, but not in the event parking
+    location = Point(GEOM_PARTIAL_OVERLAP_ON_WEST[0])
+    for i in range(5):
+        event_parking = create_event_parking(location, operator, enforcer.enforced_domain,
+                                             now - timedelta(hours=2), now + timedelta(hours=2))
+        event_parking.event_area = event_area_west
+        event_parking.save()
+    results = get(api_client, list_url)['results']
+    stats_data = find_by_obj_id(parking_area, results)
+    assert stats_data['current_parking_count'] == 10
 
 
 def test_disallowed_methods(api_client, parking_area):
@@ -42,9 +150,6 @@ def test_get_list_check_data(mocker, api_client, parking_factory, parking_area_f
 
     results = get(api_client, list_url)['results']
     assert len(results) == 4
-
-    def find_by_obj_id(obj, iterable):
-        return [x for x in iterable if x['id'] == str(obj.id)][0]
 
     stats_data_1 = find_by_obj_id(parking_area_1, results)
     stats_data_2 = find_by_obj_id(parking_area_2, results)
