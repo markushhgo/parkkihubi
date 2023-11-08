@@ -1,4 +1,4 @@
-from django.db.models import Case, Count, F, Q, When
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import permissions, serializers, viewsets
 
@@ -6,30 +6,34 @@ from parkings.models import ParkingArea
 from parkings.pagination import Pagination
 
 from ..common import WGS84InBBoxFilter
+from .utils import blur_count
 
 
 class ParkingAreaStatisticsSerializer(serializers.ModelSerializer):
-    current_parking_count = serializers.SerializerMethodField()
-
-    def get_current_parking_count(self, area):
-        return self.blur_count(area['current_parking_count'])
-
-    def blur_count(self, count):
-        """
-        Returns a blurred count, which is supposed to hide individual
-        parkings.
-        """
-        if count <= 3:
-            return 0
-        else:
-            return count
 
     class Meta:
         model = ParkingArea
         fields = (
             'id',
-            'current_parking_count',
         )
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        now = timezone.now()
+        num_parkings = instance.parkings.filter(Q(time_start__lte=now) & Q(
+            time_end__gte=now) | Q(time_end__isnull=True)).count()
+        num_event_parkings = 0
+        for event_area in instance.overlapping_event_areas.all():
+            for event_parking in event_area.event_parkings.all():
+                if (instance.geom.intersects(event_parking.location_gk25fin) and
+                    event_parking.time_start <= now and
+                        event_parking.time_end >= now):
+                    num_event_parkings += 1
+
+        total_parkings = num_event_parkings + num_parkings
+
+        representation['current_parking_count'] = blur_count(total_parkings)
+        return representation
 
 
 class PublicAPIParkingAreaStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
@@ -40,23 +44,3 @@ class PublicAPIParkingAreaStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
     bbox_filter_field = 'geom'
     filter_backends = (WGS84InBBoxFilter,)
     bbox_filter_include_overlapping = True
-
-    def get_queryset(self):
-        now = timezone.now()
-        return ParkingArea.objects.annotate(
-            current_parking_count=Count(
-                Case(
-                    When(
-                        Q(parkings__time_start__lte=now) &
-                        (Q(parkings__time_end__gte=now) | Q(parkings__time_end__isnull=True)),
-                        then=1,
-                    ),
-                    When(
-                        Q(overlapping_event_areas__event_parkings__time_start__lte=now) &
-                        Q(overlapping_event_areas__event_parkings__time_end__gte=now) &
-                        Q(geom__intersects=F("overlapping_event_areas__event_parkings__location")),
-                        then=1,
-                    )
-                )
-            )
-        ).values('id', 'current_parking_count').order_by('origin_id')
