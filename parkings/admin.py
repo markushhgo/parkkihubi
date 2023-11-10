@@ -75,7 +75,7 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     ordering = ('origin_id',)
 
     def get_parking_areas(self, obj):
-        return '\n'.join(p.name for p in obj.parking_areas.all())
+        return '\n'.join(p.origin_id for p in obj.parking_areas.all())
 
     def save_related(self, request, form, formsets, change):
         super(EventAreaAdmin, self).save_related(request, form, formsets, change)
