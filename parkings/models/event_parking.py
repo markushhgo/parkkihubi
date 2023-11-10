@@ -27,7 +27,8 @@ class EventParking(AbstractParking):
     )
     # Store location also in GK25, as area geometries are in GK25. This avoids performance intensive
     # SRS transformations when calculating area statistics.
-    location_gk25fin = models.PointField(srid=3879, verbose_name=_("location_gk25fin"), null=True, blank=True)
+    location_gk25fin = models.PointField(srid=3879, verbose_name=_(
+        "location_gk25fin"), db_index=True, null=True, blank=True)
 
     def save(self, update_fields=None, *args, **kwargs):
         if not self.domain_id:
