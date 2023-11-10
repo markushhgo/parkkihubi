@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.utils.timezone import localtime, now
 from django.utils.translation import ugettext_lazy as _
 
+from parkings.models.constants import GK25FIN_SRID
 from parkings.models.mixins import TimestampedModelMixin, UUIDPrimaryKeyMixin
 from parkings.models.operator import Operator
 from parkings.models.parking_area import ParkingArea
@@ -83,10 +84,15 @@ class ParkingQuerySet(AnonymizableRegNumQuerySet, models.QuerySet):
 
 
 class AbstractParking(TimestampedModelMixin, UUIDPrimaryKeyMixin):
+
     VALID = 'valid'
     NOT_VALID = 'not_valid'
 
     location = models.PointField(verbose_name=_("location"), null=True, blank=True)
+    # Store location also in GK25, as area geometries are in GK25. This avoids performance intensive
+    # SRS transformations when calculating area statistics.
+    location_gk25fin = models.PointField(srid=3879, verbose_name=_(
+        "location_gk25fin"), db_index=True, null=True, blank=True)
     operator = models.ForeignKey(
         Operator, on_delete=models.PROTECT, verbose_name=_("operator")
     )
@@ -131,6 +137,14 @@ class AbstractParking(TimestampedModelMixin, UUIDPrimaryKeyMixin):
             end = localtime(self.time_end).replace(tzinfo=None)
 
         return "%s -> %s (%s)" % (start, end, self.registration_number)
+
+    def save(self, update_fields=None, *args, **kwargs):
+        if update_fields is None or 'normalized_reg_num' in update_fields:
+            self.normalized_reg_num = normalize_reg_num(self.registration_number)
+        if (update_fields is None or 'location' in update_fields) and self.location:
+            self.location_gk25fin = self.location.transform(GK25FIN_SRID, clone=True)
+
+        super().save(update_fields=update_fields, *args, **kwargs)
 
 
 class AbstractArchivedParking(AbstractParking):
@@ -206,10 +220,6 @@ class Parking(AbstractArchivedParking):
             self.region = self.get_region()
         if update_fields is None or 'parking_area' in update_fields:
             self.parking_area = get_closest_area(self.location, self.domain)
-
-        if update_fields is None or 'normalized_reg_num' in update_fields:
-            self.normalized_reg_num = (
-                normalize_reg_num(self.registration_number))
 
         super().save(update_fields=update_fields, *args, **kwargs)
 
