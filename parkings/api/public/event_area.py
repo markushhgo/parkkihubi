@@ -28,6 +28,10 @@ class EventAreaSerializer(AreaSerializer):
 
     class Meta(AreaSerializer.Meta):
         model = EventArea
+        fields = AreaSerializer.Meta.fields + (
+            'event_start',
+            'event_end',
+        )
 
 
 class PublicAPIEventAreaViewSet(viewsets.ReadOnlyModelViewSet):
