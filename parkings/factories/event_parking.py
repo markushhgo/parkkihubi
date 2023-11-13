@@ -13,7 +13,7 @@ from .event_area import EventAreaFactory
 from .faker import fake
 from .gis import generate_location
 from .operator import OperatorFactory
-from .utils import generate_registration_number
+from .utils import generate_registration_number, get_time_far_enough_in_past
 
 
 class AbstractParkingFactory(factory.django.DjangoModelFactory):
@@ -32,12 +32,18 @@ class EventParkingFactory(AbstractParkingFactory):
         model = EventParking
 
 
+class HistoryEventParkingFactory(EventParkingFactory):
+    time_end = factory.LazyFunction(get_time_far_enough_in_past)
+    time_start = factory.lazy_attribute(
+        lambda o:
+        o.time_end - timedelta(seconds=fake.random.randint(0, 60 * 24 * 14))
+        if o.time_end is not None
+        else get_time_far_enough_in_past()
+    )
+
+
 class CompleteEventParkingFactory(EventParkingFactory):
     domain = factory.SubFactory(EnforcementDomainFactory)
 
     event_area = factory.SubFactory(
         EventAreaFactory, domain=factory.SelfAttribute('..domain'))
-
-
-def get_time_far_enough_in_past():
-    return fake.date_time_this_decade(before_now=True, tzinfo=pytz.utc) - timedelta(days=7, seconds=1)
