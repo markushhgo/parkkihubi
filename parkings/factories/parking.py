@@ -15,7 +15,7 @@ from .operator import OperatorFactory
 from .parking_area import ParkingAreaFactory
 from .region import RegionFactory
 from .terminal import TerminalFactory
-from .utils import generate_registration_number
+from .utils import generate_registration_number, get_time_far_enough_in_past
 
 
 def create_payment_zone(**kwargs):
@@ -71,10 +71,6 @@ class DiscParkingFactory(ParkingFactory):
     is_disc_parking = True
     time_end = None
     zone = None
-
-
-def get_time_far_enough_in_past():
-    return fake.date_time_this_decade(before_now=True, tzinfo=pytz.utc) - timedelta(days=7, seconds=1)
 
 
 class HistoryParkingFactory(ParkingFactory):
