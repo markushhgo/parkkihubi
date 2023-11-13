@@ -22,7 +22,7 @@ class EventAreaStatisticsSerializer(serializers.ModelSerializer):
     @lru_cache()
     def get_event_parking_count(self):
         now = timezone.now()
-        return EventArea.objects.filter(event_end__gte=timezone.now()).annotate(
+        return EventArea.objects.filter(time_end__gte=timezone.now()).annotate(
             event_parking_count=Count(
                 Case(
                     When(
@@ -37,7 +37,7 @@ class EventAreaStatisticsSerializer(serializers.ModelSerializer):
     @lru_cache()
     def get_parking_count(self):
         now = timezone.now()
-        return EventArea.objects.filter(event_end__gte=timezone.now()).annotate(parking_count=Count(
+        return EventArea.objects.filter(time_end__gte=timezone.now()).annotate(parking_count=Count(
             Case(
                 When(
                     (Q(parking_areas__parkings__time_start__lte=now) &
@@ -65,7 +65,7 @@ class EventAreaStatisticsSerializer(serializers.ModelSerializer):
 
 class PublicAPIEventAreaStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
-    queryset = EventArea.objects.filter(event_end__gte=timezone.now()).order_by('origin_id')
+    queryset = EventArea.objects.filter(time_end__gte=timezone.now()).order_by('origin_id')
     serializer_class = EventAreaStatisticsSerializer
     pagination_class = Pagination
     bbox_filter_field = 'geom'
