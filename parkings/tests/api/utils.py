@@ -100,3 +100,7 @@ def check_response_objects(data, objects):
         set(expected_ids) == set(actual_ids) and
         len(objects) == len(results)), (
             'Expected {} but got {}'.format(expected_ids, actual_ids))
+
+
+def find_by_obj_id(obj, iterable):
+    return [x for x in iterable if x['id'] == str(obj.id)][0]
