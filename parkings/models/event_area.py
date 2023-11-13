@@ -13,17 +13,16 @@ class EventArea(AbstractParkingArea):
     domain = models.ForeignKey(EnforcementDomain, on_delete=models.PROTECT,
                                related_name='event_areas')
 
-    event_start = models.DateTimeField(
+    time_start = models.DateTimeField(
         verbose_name=_("event start time"), db_index=True,
     )
-    event_end = models.DateTimeField(
+    time_end = models.DateTimeField(
         verbose_name=_("event end time"), db_index=True, null=True, blank=True,
     )
     parking_areas = models.ManyToManyField(
         ParkingArea, verbose_name=_("overlapping parking areas"), blank=True,
         related_name="overlapping_event_areas",
     )
-
     objects = EventAreaQuerySet.as_manager()
 
     class Meta:
