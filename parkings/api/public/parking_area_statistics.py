@@ -31,7 +31,7 @@ class ParkingAreaStatisticsSerializer(serializers.ModelSerializer):
     """
 
     @lru_cache()
-    def get_parkings_count(self):
+    def get_parking_count(self):
         now = timezone.now()
         return ParkingArea.objects.all().annotate(
             parking_count=Count(
@@ -46,7 +46,7 @@ class ParkingAreaStatisticsSerializer(serializers.ModelSerializer):
         )
 
     @lru_cache()
-    def get_event_parkings_count(self):
+    def get_event_parking_count(self):
         now = timezone.now()
         return ParkingArea.objects.all().annotate(event_parking_count=Count(
             Case(
@@ -62,15 +62,15 @@ class ParkingAreaStatisticsSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        parkings_count = self.get_parkings_count().get(id=instance.id).parking_count
-        event_parkings_count = self.get_event_parkings_count().get(id=instance.id).event_parking_count
-        representation['current_parking_count'] = blur_count(parkings_count + event_parkings_count)
+        parking_count = self.get_parking_count().get(id=instance.id).parking_count
+        event_parking_count = self.get_event_parking_count().get(id=instance.id).event_parking_count
+        representation['current_parking_count'] = blur_count(parking_count + event_parking_count)
         return representation
 
     @classmethod
     def clear_cache(cls):
-        cls.get_parkings_count.cache_clear()
-        cls.get_event_parkings_count.cache_clear()
+        cls.get_parking_count.cache_clear()
+        cls.get_event_parking_count.cache_clear()
 
 
 class PublicAPIParkingAreaStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
