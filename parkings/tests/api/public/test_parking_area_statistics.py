@@ -9,8 +9,8 @@ from parkings.models import EventArea, EventParking, ParkingArea
 
 from ..enforcement.test_check_parking import create_area_geom
 from ..utils import (
-    check_list_endpoint_base_fields, check_method_status_codes, get,
-    get_ids_from_results)
+    check_list_endpoint_base_fields, check_method_status_codes, find_by_obj_id,
+    get, get_ids_from_results)
 
 list_url = reverse('public:v1:parkingareastatistics-list')
 
@@ -61,10 +61,6 @@ def get_detail_url(obj):
     return reverse('public:v1:parkingareastatistics-detail', kwargs={'pk': obj.pk})
 
 
-def find_by_obj_id(obj, iterable):
-    return [x for x in iterable if x['id'] == str(obj.id)][0]
-
-
 def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator):
     parking_area = create_parking_area("center", enforcer.enforced_domain, GEOM_CENTER,)
     results = get(api_client, list_url)['results']
@@ -87,8 +83,8 @@ def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator
     location = Point(centroid.x, centroid.y)
     event_parking = create_event_parking(location, operator, enforcer.enforced_domain,
                                          now - timedelta(hours=2), now + timedelta(hours=2))
-    event_parking.event_area = event_area
-    event_parking.save()
+    assert event_parking.event_area == event_area
+
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(parking_area, results)
     assert stats_data['current_parking_count'] == 5
@@ -104,8 +100,7 @@ def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator
     for i in range(5):
         event_parking = create_event_parking(location, operator, enforcer.enforced_domain,
                                              now - timedelta(hours=2), now + timedelta(hours=2))
-        event_parking.event_area = event_area_west
-        event_parking.save()
+
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(parking_area, results)
     assert stats_data['current_parking_count'] == 10
@@ -115,8 +110,7 @@ def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator
     for i in range(5):
         event_parking = create_event_parking(location, operator, enforcer.enforced_domain,
                                              now - timedelta(hours=2), now + timedelta(hours=2))
-        event_parking.event_area = event_area_west
-        event_parking.save()
+
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(parking_area, results)
     assert stats_data['current_parking_count'] == 10
@@ -133,7 +127,7 @@ def test_list_endpoint_base_fields(api_client):
     check_list_endpoint_base_fields(stats_data)
 
 
-def test_get_list_check_data(mocker, api_client, parking_factory, parking_area_factory, history_parking_factory):
+def test_get_list_check_data(api_client, parking_factory, parking_area_factory, history_parking_factory):
     parking_area_1, parking_area_2, parking_area_3, parking_area_4 = parking_area_factory.create_batch(4)
 
     with patch('parkings.models.parking.get_closest_area', return_value=parking_area_1):
