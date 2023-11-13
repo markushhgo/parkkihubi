@@ -29,13 +29,13 @@ GEOM_PARTIAL_OVERLAP_ON_WEST = [
 ]
 
 
-def create_event_area(origin_id, domain, geom, event_start, event_end):
+def create_event_area(origin_id, domain, geom, time_start, time_end):
     return EventArea.objects.create(
         origin_id=origin_id,
         domain=domain,
         geom=create_area_geom(geom=geom),
-        event_start=event_start,
-        event_end=event_end,
+        time_start=time_start,
+        time_end=time_end,
     )
 
 

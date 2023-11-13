@@ -29,14 +29,14 @@ class EventAreaSerializer(AreaSerializer):
     class Meta(AreaSerializer.Meta):
         model = EventArea
         fields = AreaSerializer.Meta.fields + (
-            'event_start',
-            'event_end',
+            'time_start',
+            'time_end',
         )
 
 
 class PublicAPIEventAreaViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
-    queryset = EventArea.objects.filter(event_end__gte=timezone.now()).order_by('origin_id')
+    queryset = EventArea.objects.filter(time_end__gte=timezone.now()).order_by('origin_id')
     serializer_class = EventAreaSerializer
     pagination_class = GeoJsonPagination
     bbox_filter_field = 'geom'

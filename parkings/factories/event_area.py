@@ -19,6 +19,6 @@ class EventAreaFactory(factory.django.DjangoModelFactory):
     geom = factory.LazyFunction(generate_multi_polygon)
     capacity_estimate = factory.LazyFunction(lambda: fake.random.randint(1, 50))
     origin_id = factory.LazyFunction(generate_origin_id)
-    event_start = factory.LazyFunction(lambda: fake.date_time_between(
+    time_start = factory.LazyFunction(lambda: fake.date_time_between(
         start_date='-2h', end_date='-1h', tzinfo=pytz.utc))
-    event_end = factory.LazyFunction(lambda: fake.date_time_between(start_date='+1h', end_date='+2h', tzinfo=pytz.utc))
+    time_end = factory.LazyFunction(lambda: fake.date_time_between(start_date='+1h', end_date='+2h', tzinfo=pytz.utc))

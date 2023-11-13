@@ -35,7 +35,7 @@ def test_get_list_check_data(api_client, event_area):
     assert len(geometry_data['coordinates']) > 0
 
     properties_data = feature_data['properties']
-    assert properties_data.keys() == {'capacity_estimate', 'event_start', 'event_end'}
+    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end'}
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
@@ -43,8 +43,8 @@ def test_dated_event_area(api_client, event_area):
     data = get(api_client, list_url)
     data["count"] == 1
 
-    event_area.event_start -= timedelta(days=1)
-    event_area.event_end -= timedelta(days=1)
+    event_area.time_start -= timedelta(days=1)
+    event_area.time_end -= timedelta(days=1)
     event_area.refresh_from_db()
 
     data = get(api_client, list_url)
@@ -69,7 +69,7 @@ def test_get_detail_check_data(api_client, event_area):
     assert len(geometry_data['coordinates']) > 0
 
     properties_data = feature_data['properties']
-    assert properties_data.keys() == {'capacity_estimate', 'event_start', 'event_end'}
+    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end'}
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
