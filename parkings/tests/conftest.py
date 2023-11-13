@@ -4,15 +4,16 @@ from pytest_factoryboy import register
 from parkings.factories import (
     AdminUserFactory, CompleteEventParkingFactory, DiscParkingFactory,
     EnforcementDomainFactory, EnforcerFactory, EventAreaFactory,
-    EventParkingFactory, HistoryParkingFactory, MonitorFactory,
-    OperatorFactory, ParkingAreaFactory, ParkingFactory, RegionFactory,
-    StaffUserFactory, UserFactory)
+    EventParkingFactory, HistoryEventParkingFactory, HistoryParkingFactory,
+    MonitorFactory, OperatorFactory, ParkingAreaFactory, ParkingFactory,
+    RegionFactory, StaffUserFactory, UserFactory)
 
 register(OperatorFactory)
 register(ParkingFactory, 'parking')
 register(EventAreaFactory, 'event_area')
 register(EventParkingFactory, 'event_parking')
 register(CompleteEventParkingFactory, 'complete_event_parking')
+register(HistoryEventParkingFactory, 'history_event_parking')
 register(HistoryParkingFactory, 'history_parking')
 register(AdminUserFactory, 'admin_user')
 register(StaffUserFactory, 'staff_user')
