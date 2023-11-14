@@ -30,7 +30,7 @@ class EventArea(AbstractParkingArea):
     )
     price = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     price_unit = models.CharField(max_length=1, choices=PRICE_UNIT_CHOICES, null=True, blank=True)
-    bus_stop_numbers = ArrayField(models.SmallIntegerField(), null=True, blank=True,
+    bus_stop_numbers = ArrayField(models.SmallIntegerField(), null=True, blank=True, verbose_name=_('bus stop numbers'),
                                   help_text=_('Comma separated list of bus stop numbers. e.g.: 123,345,678'))
 
     objects = EventAreaQuerySet.as_manager()
