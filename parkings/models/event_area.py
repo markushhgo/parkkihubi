@@ -10,6 +10,10 @@ class EventAreaQuerySet(ParkingAreaQuerySet):
 
 
 class EventArea(AbstractParkingArea):
+    PRICE_UNIT_CHOICES = [
+        ('H', 'Hour'),
+        ('D', 'Day'),
+    ]
     domain = models.ForeignKey(EnforcementDomain, on_delete=models.PROTECT,
                                related_name='event_areas')
 
@@ -24,7 +28,7 @@ class EventArea(AbstractParkingArea):
         related_name="overlapping_event_areas",
     )
     price = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-
+    price_unit = models.CharField(max_length=1, choices=PRICE_UNIT_CHOICES, null=True, blank=True)
     objects = EventAreaQuerySet.as_manager()
 
     class Meta:
