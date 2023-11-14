@@ -31,6 +31,7 @@ class EventAreaSerializer(AreaSerializer):
         fields = AreaSerializer.Meta.fields + (
             'time_start',
             'time_end',
+            'price',
         )
 
 
