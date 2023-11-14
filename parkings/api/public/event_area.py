@@ -33,6 +33,7 @@ class EventAreaSerializer(AreaSerializer):
             'time_end',
             'price',
             'price_unit',
+            'bus_stop_numbers',
         )
 
 
