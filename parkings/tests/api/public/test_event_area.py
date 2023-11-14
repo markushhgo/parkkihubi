@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.urls import reverse
@@ -35,8 +36,15 @@ def test_get_list_check_data(api_client, event_area):
     assert len(geometry_data['coordinates']) > 0
 
     properties_data = feature_data['properties']
-    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end'}
+    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end', 'price'}
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
+
+
+def test_priced_event_area(api_client, event_area):
+    event_area.price = Decimal('1.23')
+    event_area.save()
+    feature_data = get(api_client, get_detail_url(event_area))
+    assert feature_data['properties']['price'] == '1.23'
 
 
 def test_dated_event_area(api_client, event_area):
@@ -69,7 +77,7 @@ def test_get_detail_check_data(api_client, event_area):
     assert len(geometry_data['coordinates']) > 0
 
     properties_data = feature_data['properties']
-    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end'}
+    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end', 'price'}
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
