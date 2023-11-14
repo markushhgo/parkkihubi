@@ -8,6 +8,8 @@ from ..utils import check_method_status_codes, get, get_ids_from_results
 
 list_url = reverse('public:v1:eventarea-list')
 
+PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit'}
+
 
 def get_detail_url(obj):
     return reverse('public:v1:eventarea-detail', kwargs={'pk': obj.pk})
@@ -36,7 +38,7 @@ def test_get_list_check_data(api_client, event_area):
     assert len(geometry_data['coordinates']) > 0
 
     properties_data = feature_data['properties']
-    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end', 'price'}
+    assert properties_data.keys() == PROPERTIES_KEYS
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
@@ -45,6 +47,13 @@ def test_priced_event_area(api_client, event_area):
     event_area.save()
     feature_data = get(api_client, get_detail_url(event_area))
     assert feature_data['properties']['price'] == '1.23'
+
+
+def test_event_area_with_price_unit(api_client, event_area):
+    event_area.price_unit = 'h'
+    event_area.save()
+    feature_data = get(api_client, get_detail_url(event_area))
+    assert feature_data['properties']['price_unit'] == 'h'
 
 
 def test_dated_event_area(api_client, event_area):
@@ -77,7 +86,7 @@ def test_get_detail_check_data(api_client, event_area):
     assert len(geometry_data['coordinates']) > 0
 
     properties_data = feature_data['properties']
-    assert properties_data.keys() == {'capacity_estimate', 'time_start', 'time_end', 'price'}
+    assert properties_data.keys() == PROPERTIES_KEYS
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
