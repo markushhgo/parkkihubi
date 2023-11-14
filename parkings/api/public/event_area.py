@@ -32,6 +32,7 @@ class EventAreaSerializer(AreaSerializer):
             'time_start',
             'time_end',
             'price',
+            'price_unit',
         )
 
 
