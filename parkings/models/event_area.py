@@ -23,6 +23,8 @@ class EventArea(AbstractParkingArea):
         ParkingArea, verbose_name=_("overlapping parking areas"), blank=True,
         related_name="overlapping_event_areas",
     )
+    price = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+
     objects = EventAreaQuerySet.as_manager()
 
     class Meta:
