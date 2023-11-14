@@ -1,4 +1,5 @@
 from django.contrib.gis.db import models
+from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import ugettext_lazy as _
 
 from .enforcement_domain import EnforcementDomain
@@ -18,17 +19,20 @@ class EventArea(AbstractParkingArea):
                                related_name='event_areas')
 
     time_start = models.DateTimeField(
-        verbose_name=_("event start time"), db_index=True,
+        verbose_name=_('event start time'), db_index=True,
     )
     time_end = models.DateTimeField(
-        verbose_name=_("event end time"), db_index=True, null=True, blank=True,
+        verbose_name=_('event end time'), db_index=True, null=True, blank=True,
     )
     parking_areas = models.ManyToManyField(
-        ParkingArea, verbose_name=_("overlapping parking areas"), blank=True,
-        related_name="overlapping_event_areas",
+        ParkingArea, verbose_name=_('overlapping parking areas'), blank=True,
+        related_name='overlapping_event_areas',
     )
     price = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     price_unit = models.CharField(max_length=1, choices=PRICE_UNIT_CHOICES, null=True, blank=True)
+    bus_stop_numbers = ArrayField(models.SmallIntegerField(), null=True, blank=True,
+                                  help_text=_('Comma separated list of bus stop numbers. e.g.: 123,345,678'))
+
     objects = EventAreaQuerySet.as_manager()
 
     class Meta:
