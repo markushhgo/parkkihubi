@@ -8,7 +8,7 @@ from ..utils import check_method_status_codes, get, get_ids_from_results
 
 list_url = reverse('public:v1:eventarea-list')
 
-PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit'}
+PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit', 'bus_stop_numbers'}
 
 
 def get_detail_url(obj):
@@ -54,6 +54,19 @@ def test_event_area_with_price_unit(api_client, event_area):
     event_area.save()
     feature_data = get(api_client, get_detail_url(event_area))
     assert feature_data['properties']['price_unit'] == 'h'
+
+
+def test_event_area_with_bus_stop_numbers(api_client, event_area):
+    event_area.bus_stop_numbers = [123]
+    event_area.save()
+    feature_data = get(api_client, get_detail_url(event_area))
+    assert feature_data['properties']['bus_stop_numbers'] == [123]
+
+    event_area.bus_stop_numbers.append(456)
+    event_area.save()
+    feature_data = get(api_client, get_detail_url(event_area))
+    assert len(feature_data['properties']['bus_stop_numbers']) == 2
+    assert feature_data['properties']['bus_stop_numbers'] == [123, 456]
 
 
 def test_dated_event_area(api_client, event_area):
