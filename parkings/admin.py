@@ -72,8 +72,8 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     list_display = ['id', 'origin_id', 'domain', 'time_start', 'time_end', 'price', 'price_unit',
                     'capacity_estimate', 'estimated_capacity', 'area', 'get_parking_areas']
     list_filter = ['domain']
-
     ordering = ('origin_id',)
+    exclude = ('parking_areas',)
 
     def get_parking_areas(self, obj):
         return '\n'.join(p.origin_id for p in obj.parking_areas.all())
