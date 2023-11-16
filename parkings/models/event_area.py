@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField
-from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 
 from .enforcement_domain import EnforcementDomain
@@ -8,7 +7,7 @@ from .parking_area import AbstractParkingArea, ParkingArea, ParkingAreaQuerySet
 
 
 class EventAreaQuerySet(ParkingAreaQuerySet):
-    pass
+   pass
 
 
 class EventArea(AbstractParkingArea):
@@ -30,11 +29,8 @@ class EventArea(AbstractParkingArea):
     domain = models.ForeignKey(EnforcementDomain, on_delete=models.PROTECT,
                                related_name='event_areas')
 
-    time_start = models.DateTimeField(verbose_name=_('event start time'), db_index=True,
-                                      null=True, blank=True)
-
-    time_end = models.DateTimeField(verbose_name=_('event end time'), db_index=True,
-                                    null=True, blank=True)
+    time_start = models.DateTimeField(verbose_name=_('event start time'), db_index=True)
+    time_end = models.DateTimeField(verbose_name=_('event end time'), db_index=True)
     parking_areas = models.ManyToManyField(
         ParkingArea, verbose_name=_('overlapping parking areas'), blank=True,
         related_name='overlapping_event_areas',
@@ -72,12 +68,4 @@ class EventArea(AbstractParkingArea):
         return 'Event Area %s' % str(self.origin_id)
 
     def clean(self):
-        has_event_time = bool(self.time_start and self.time_end)
-        has_time_period = bool(self.time_period_time_start and self.time_period_time_end)
-        if not has_event_time and not has_time_period:
-            raise ValidationError(
-                'Provide "event start time" and "event end time" or a time period including week days')
-        if has_event_time and has_time_period:
-            raise ValidationError('Provide either "event start time" and "event end time" or a time period week days')
-        if has_time_period and not bool(self.time_period_days_of_week):
-            raise ValidationError('Provide one or more days of weeks')
+        pass
