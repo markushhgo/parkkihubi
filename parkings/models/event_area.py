@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 
 from .enforcement_domain import EnforcementDomain
@@ -8,7 +9,6 @@ from .parking_area import AbstractParkingArea, ParkingArea, ParkingAreaQuerySet
 
 class EventAreaQuerySet(ParkingAreaQuerySet):
     pass
-    
 
 
 class EventArea(AbstractParkingArea):
@@ -50,7 +50,7 @@ class EventArea(AbstractParkingArea):
         null=True, blank=True
     )
     time_period_days_of_week = ArrayField(models.SmallIntegerField(choices=ISO_DAYS_OF_WEEK_CHOICES),
-                                          verbose_name=_('time period days of week'), default=list,
+                                          verbose_name=_('time period days of week'),
                                           null=True, blank=True)
 
     objects = EventAreaQuerySet.as_manager()
@@ -60,6 +60,8 @@ class EventArea(AbstractParkingArea):
         verbose_name_plural = _('event areas')
 
     def save(self, *args, **kwargs):
+        # Force custom validation
+        self.clean()
         super().save(*args, **kwargs)
         for parking_area in ParkingArea.objects.all():
             if self.geom.intersects(parking_area.geom):
@@ -69,4 +71,9 @@ class EventArea(AbstractParkingArea):
         return 'Event Area %s' % str(self.origin_id)
 
     def clean(self):
-        pass
+        days_of_week = self.time_period_days_of_week if self.time_period_days_of_week else []
+        has_time_period = bool(
+            self.time_period_time_start is not None or self.time_period_time_end is not None or len(days_of_week) > 0)
+        if (has_time_period and
+                not bool(self.time_period_time_start and self.time_period_time_end and self.time_period_days_of_week)):
+            raise ValidationError('Provide "start time", "end time" and "days of week" for Time period.')
