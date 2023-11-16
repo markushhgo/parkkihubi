@@ -15,6 +15,17 @@ class EventArea(AbstractParkingArea):
         ('H', 'Hour'),
         ('D', 'Day'),
     ]
+
+    ISO_DAYS_OF_WEEK_CHOICES = [
+        (1, 'Monday'),
+        (2, 'Tuesday'),
+        (3, 'Wednesday'),
+        (4, 'Thursday'),
+        (5, 'Friday'),
+        (6, 'Saturday'),
+        (7, 'Sunday'),
+    ]
+
     domain = models.ForeignKey(EnforcementDomain, on_delete=models.PROTECT,
                                related_name='event_areas')
 
@@ -31,6 +42,18 @@ class EventArea(AbstractParkingArea):
     price_unit = models.CharField(max_length=1, choices=PRICE_UNIT_CHOICES, null=True, blank=True)
     bus_stop_numbers = ArrayField(models.SmallIntegerField(), null=True, blank=True, verbose_name=_('bus stop numbers'),
                                   help_text=_('Comma separated list of bus stop numbers. e.g.: 123,345,678'))
+
+    time_period_time_start = models.DateTimeField(
+        verbose_name=_("time period start time"), db_index=True,
+        null=True, blank=True
+    )
+    time_period_time_end = models.DateTimeField(
+        verbose_name=_("time period end time"), db_index=True,
+        null=True, blank=True
+    )
+    time_period_days_of_week = ArrayField(models.SmallIntegerField(choices=ISO_DAYS_OF_WEEK_CHOICES),
+                                          verbose_name=_('time period days of week'), default=list,
+                                          null=True, blank=True)
 
     objects = EventAreaQuerySet.as_manager()
 
