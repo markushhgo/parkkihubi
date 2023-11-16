@@ -8,7 +8,8 @@ from ..utils import check_method_status_codes, get, get_ids_from_results
 
 list_url = reverse('public:v1:eventarea-list')
 
-PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit', 'bus_stop_numbers'}
+PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit', 'bus_stop_numbers',
+                   'time_period_time_start', 'time_period_time_end', 'time_period_days_of_week'}
 
 
 def get_detail_url(obj):
