@@ -34,6 +34,9 @@ class EventAreaSerializer(AreaSerializer):
             'price',
             'price_unit',
             'bus_stop_numbers',
+            'time_period_time_start',
+            'time_period_time_end',
+            'time_period_days_of_week',
         )
 
 
