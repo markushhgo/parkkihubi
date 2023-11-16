@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.utils.translation import ugettext_lazy as _
 
 from .enforcement_domain import EnforcementDomain
@@ -69,3 +70,14 @@ class EventArea(AbstractParkingArea):
 
     def __str__(self):
         return 'Event Area %s' % str(self.origin_id)
+
+    def clean(self):
+        has_event_time = bool(self.time_start and self.time_end)
+        has_time_period = bool(self.time_period_time_start and self.time_period_time_end)
+        if not has_event_time and not has_time_period:
+            raise ValidationError(
+                'Provide "event start time" and "event end time" or a time period including week days')
+        if has_event_time and has_time_period:
+            raise ValidationError('Provide either "event start time" and "event end time" or a time period week days')
+        if has_time_period and not bool(self.time_period_days_of_week):
+            raise ValidationError('Provide one or more days of weeks')
