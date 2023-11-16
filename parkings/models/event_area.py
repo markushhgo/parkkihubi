@@ -7,7 +7,8 @@ from .parking_area import AbstractParkingArea, ParkingArea, ParkingAreaQuerySet
 
 
 class EventAreaQuerySet(ParkingAreaQuerySet):
-   pass
+    pass
+    
 
 
 class EventArea(AbstractParkingArea):
@@ -40,11 +41,11 @@ class EventArea(AbstractParkingArea):
     bus_stop_numbers = ArrayField(models.SmallIntegerField(), null=True, blank=True, verbose_name=_('bus stop numbers'),
                                   help_text=_('Comma separated list of bus stop numbers. e.g.: 123,345,678'))
 
-    time_period_time_start = models.DateTimeField(
+    time_period_time_start = models.TimeField(
         verbose_name=_("time period start time"), db_index=True,
         null=True, blank=True
     )
-    time_period_time_end = models.DateTimeField(
+    time_period_time_end = models.TimeField(
         verbose_name=_("time period end time"), db_index=True,
         null=True, blank=True
     )
