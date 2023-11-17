@@ -1,6 +1,9 @@
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 from parkings.models import EventArea
 
@@ -36,3 +39,32 @@ def test_price(event_area):
     event_area.save()
     event_area.refresh_from_db()
     assert event_area.price == Decimal('4.12')
+
+
+@pytest.mark.django_db
+def test_model_clean(event_area):
+    now = timezone.now()
+    event_area.time_period_time_end = now + timedelta(hours=2)
+    with pytest.raises(ValidationError, match='Provide "start time",'):
+        event_area.save()
+
+    event_area.time_period_time_start = now + timedelta(hours=2)
+    with pytest.raises(ValidationError, match='Provide "start time",'):
+        event_area.save()
+
+    event_area.time_period_days_of_week = [1]
+    # All time period field are now set, no exception should be thrown.
+    try:
+        event_area.save()
+    except ValidationError as exc:
+        assert False, 'event_area.save() raised and exception {}'.format(exc)
+
+    event_area.time_start = event_area.time_end + timedelta(hours=1)
+    with pytest.raises(ValidationError, match='"time_start" cannot be after "time_end".'):
+        event_area.save()
+
+    event_area.time_start = now - timedelta(hours=1)
+    event_area.time_period_time_start = now + timedelta(hours=1)
+    event_area.time_period_time_end = now
+    with pytest.raises(ValidationError, match='"time_period_time_start" cannot be after'):
+        event_area.save()
