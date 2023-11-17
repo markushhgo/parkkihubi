@@ -1,4 +1,3 @@
-from django.utils import timezone
 from rest_framework import permissions, viewsets
 from rest_framework_gis.pagination import GeoJsonPagination
 from rest_framework_gis.serializers import (
@@ -42,9 +41,11 @@ class EventAreaSerializer(AreaSerializer):
 
 class PublicAPIEventAreaViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
-    queryset = EventArea.objects.filter(time_end__gte=timezone.now()).order_by('origin_id')
     serializer_class = EventAreaSerializer
     pagination_class = GeoJsonPagination
     bbox_filter_field = 'geom'
     filter_backends = (WGS84InBBoxFilter,)
     bbox_filter_include_overlapping = True
+
+    def get_queryset(self):
+        return EventArea.objects.get_active_queryset()
