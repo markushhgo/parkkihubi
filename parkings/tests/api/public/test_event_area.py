@@ -1,8 +1,11 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from decimal import Decimal
 
+import pytest
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.urls import reverse
+from django.utils import timezone
+from freezegun import freeze_time
 
 from ..utils import check_method_status_codes, get, get_ids_from_results
 
@@ -125,3 +128,36 @@ def test_bounding_box_filter(api_client, event_area_factory):
 
     data = get(api_client, list_url + '?in_bbox=80,80,85,85')
     assert data['count'] == 0
+
+
+@pytest.mark.django_db
+@freeze_time('2023-11-01T12:10:0Z')
+def test_time_period(api_client, event_area):
+    now = timezone.now()
+    event_area.time_start = now - timedelta(days=1)
+    event_area.time_end = now + timedelta(days=10)
+    event_area.time_period_time_start = time(16, 0, 0)
+    event_area.time_period_time_end = time(21, 0, 0)
+    # 2023.11.1 is a wednesday, isoday number 3
+    event_area.time_period_days_of_week = [3, 4, 5]
+    event_area.save()
+
+    with freeze_time(now):
+        data = get(api_client, list_url)
+        assert data['count'] == 0
+    with freeze_time('2023-11-01T16:10:0Z'):
+        data = get(api_client, list_url)
+        assert data['count'] == 1
+
+    with freeze_time('2023-11-02T17:10:0Z'):
+        data = get(api_client, list_url)
+        assert data['count'] == 1
+
+    with freeze_time('2023-11-04T18:10:0Z'):
+        data = get(api_client, list_url)
+        assert data['count'] == 0
+
+    # Test 2023-10-4 wednesday
+    with freeze_time('2023-10-04T18:10:0Z'):
+        data = get(api_client, list_url)
+        assert data['count'] == 0
