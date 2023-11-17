@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.gis.admin import OSMGeoAdmin
 from django.db import models
@@ -66,14 +67,30 @@ class ParkingAreaAdmin(WithAreaField, OSMGeoAdmin):
     ordering = ('origin_id',)
 
 
+class EventAreaForm(forms.ModelForm):
+    class Meta:
+        model = EventArea
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['time_period_days_of_week'].widget = forms.CheckboxSelectMultiple(
+            choices=EventArea.ISO_DAYS_OF_WEEK_CHOICES)
+
+
 @admin.register(EventArea)
 class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
+    form = EventAreaForm
     area_scale = 1
-    list_display = ['id', 'origin_id', 'domain', 'time_start', 'time_end', 'price', 'price_unit',
+    list_display = ['id', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
+                    'time_period_time_end', 'get_days_of_week', 'price', 'price_unit',
                     'capacity_estimate', 'estimated_capacity', 'area', 'get_parking_areas']
     list_filter = ['domain']
     ordering = ('origin_id',)
     exclude = ('parking_areas',)
+
+    def get_days_of_week(self, obj):
+        return '\n'.join(EventArea.ISO_DAYS_OF_WEEK_CHOICES[d][1] for d in obj.time_period_days_of_week)
 
     def get_parking_areas(self, obj):
         return '\n'.join(p.origin_id for p in obj.parking_areas.all())
