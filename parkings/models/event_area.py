@@ -1,6 +1,8 @@
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from .enforcement_domain import EnforcementDomain
@@ -8,7 +10,18 @@ from .parking_area import AbstractParkingArea, ParkingArea, ParkingAreaQuerySet
 
 
 class EventAreaQuerySet(ParkingAreaQuerySet):
-    pass
+
+    def get_active_queryset(self):
+        now = timezone.now()
+        iso_weekday = now.isoweekday()
+        qs = self.filter(Q(time_end__gte=now) & Q(time_start__lte=now))
+        qs = qs.filter(
+            Q(time_period_time_end__isnull=True) & Q(time_period_time_start__isnull=True)
+            |
+            Q(time_period_time_end__gte=now) & Q(time_period_time_start__lte=now) & Q(
+                time_period_days_of_week__contains=[iso_weekday])
+        )
+        return qs.order_by('origin_id')
 
 
 class EventArea(AbstractParkingArea):
