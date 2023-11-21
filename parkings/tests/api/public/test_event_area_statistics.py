@@ -1,5 +1,4 @@
 from datetime import timedelta
-from unittest.mock import patch
 
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
 from django.urls import reverse
@@ -80,8 +79,7 @@ def test_overlapping_event_areas(api_client, event_parking_factory, enforcer, op
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(event_area, results)
     assert stats_data['current_parking_count'] == 0
-    with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
-        event_parking_factory.create_batch(4)
+    event_parking_factory.create_batch(4, event_area=event_area)
 
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(event_area, results)
@@ -144,14 +142,9 @@ def test_list_endpoint_base_fields(api_client):
 def test_get_list_check_data(api_client, event_parking_factory, event_area_factory, history_event_parking_factory):
     event_area_1, event_area_2, event_area_3 = event_area_factory.create_batch(3)
 
-    with patch('parkings.models.event_parking.get_closest_area', return_value=event_area_1):
-        event_parking_factory.create_batch(4)
-
-    with patch('parkings.models.event_parking.get_closest_area', return_value=event_area_2):
-        event_parking_factory.create_batch(3)
-
-    with patch('parkings.models.event_parking.get_closest_area', return_value=event_area_3):
-        history_event_parking_factory.create_batch(5)
+    event_parking_factory.create_batch(4, event_area=event_area_1)
+    event_parking_factory.create_batch(3, event_area=event_area_2)
+    history_event_parking_factory.create_batch(5, event_area=event_area_3)
 
     results = get(api_client, list_url)['results']
     assert len(results) == 3
@@ -167,15 +160,15 @@ def test_get_list_check_data(api_client, event_parking_factory, event_area_facto
 
 
 def test_get_detail_check_data(api_client, event_parking_factory, event_area):
-    with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
-        event_parking_factory.create_batch(3)
+    # with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
+    event_parking_factory.create_batch(3, event_area=event_area)
 
     stats_data = get(api_client, get_detail_url(event_area))
     assert stats_data.keys() == {'id', 'current_parking_count'}
     assert stats_data['current_parking_count'] == 0
 
-    with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
-        event_parking_factory()
+    # with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
+    event_parking_factory(event_area=event_area)
 
     stats_data = get(api_client, get_detail_url(event_area))
     assert stats_data['current_parking_count'] == 4
