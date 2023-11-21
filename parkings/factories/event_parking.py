@@ -25,6 +25,7 @@ class AbstractParkingFactory(factory.django.DjangoModelFactory):
     registration_number = factory.LazyFunction(generate_registration_number)
     time_start = factory.LazyFunction(lambda: fake.date_time_between(start_date='-2h', end_date='-1h', tzinfo=pytz.utc))
     time_end = factory.LazyFunction(lambda: fake.date_time_between(start_date='+1h', end_date='+2h', tzinfo=pytz.utc))
+    event_area = factory.SubFactory(EventAreaFactory)
 
 
 class EventParkingFactory(AbstractParkingFactory):
@@ -44,6 +45,3 @@ class HistoryEventParkingFactory(EventParkingFactory):
 
 class CompleteEventParkingFactory(EventParkingFactory):
     domain = factory.SubFactory(EnforcementDomainFactory)
-
-    event_area = factory.SubFactory(
-        EventAreaFactory, domain=factory.SelfAttribute('..domain'))
