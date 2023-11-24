@@ -142,6 +142,12 @@ def test_post_event_parking(operator_api_client, new_event_parking_data, event_a
 
 def test_post_event_parking_without_event_area(operator_api_client, event_parking_data_outside_event_areas, event_area):
     post(operator_api_client, list_url, event_parking_data_outside_event_areas, 400)
+    assert EventParking.objects.count() == 0
+
+    # Test that by adding event_area_id, makes post succeed
+    event_parking_data_outside_event_areas['event_area_id'] = event_area.id
+    post(operator_api_client, list_url, event_parking_data_outside_event_areas, 201)
+    assert EventParking.objects.count() == 1
 
 
 def test_patch_event_parking(operator_api_client, event_parking):
