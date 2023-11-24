@@ -7,11 +7,12 @@ from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
 
+
 from ..utils import check_method_status_codes, get, get_ids_from_results
 
 list_url = reverse('public:v1:eventarea-list')
 
-PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit', 'bus_stop_numbers',
+PROPERTIES_KEYS = {'capacity_estimate', 'time_start', 'time_end', 'price', 'price_unit_length', 'bus_stop_numbers',
                    'time_period_time_start', 'time_period_time_end', 'time_period_days_of_week'}
 
 
@@ -53,11 +54,11 @@ def test_priced_event_area(api_client, event_area):
     assert feature_data['properties']['price'] == '1.23'
 
 
-def test_event_area_with_price_unit(api_client, event_area):
-    event_area.price_unit = 'h'
+def test_event_area_with_price_unit_lenght(api_client, event_area):
+    event_area.price_unit_length = 8
     event_area.save()
     feature_data = get(api_client, get_detail_url(event_area))
-    assert feature_data['properties']['price_unit'] == 'h'
+    assert feature_data['properties']['price_unit_length'] == 8
 
 
 def test_event_area_with_bus_stop_numbers(api_client, event_area):
