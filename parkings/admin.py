@@ -83,7 +83,7 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     form = EventAreaForm
     area_scale = 1
     list_display = ['id', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
-                    'time_period_time_end', 'get_days_of_week', 'price', 'price_unit',
+                    'time_period_time_end', 'get_days_of_week', 'price', 'price_unit_length',
                     'capacity_estimate', 'estimated_capacity', 'area', 'get_parking_areas']
     list_filter = ['domain']
     ordering = ('origin_id',)
