@@ -25,10 +25,6 @@ class EventAreaQuerySet(ParkingAreaQuerySet):
 
 
 class EventArea(AbstractParkingArea):
-    PRICE_UNIT_CHOICES = [
-        ('H', 'Hour'),
-        ('D', 'Day'),
-    ]
 
     ISO_DAYS_OF_WEEK_CHOICES = [
         (1, 'Monday'),
@@ -50,7 +46,7 @@ class EventArea(AbstractParkingArea):
         related_name='overlapping_event_areas',
     )
     price = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    price_unit = models.CharField(max_length=1, choices=PRICE_UNIT_CHOICES, null=True, blank=True)
+    price_unit_length = models.PositiveIntegerField(null=True, blank=True, verbose_name=_('price unit length in hours'))
     bus_stop_numbers = ArrayField(models.SmallIntegerField(), null=True, blank=True, verbose_name=_('bus stop numbers'),
                                   help_text=_('Comma separated list of bus stop numbers. e.g.: 123,345,678'))
 
@@ -64,7 +60,7 @@ class EventArea(AbstractParkingArea):
     )
     time_period_days_of_week = ArrayField(models.SmallIntegerField(choices=ISO_DAYS_OF_WEEK_CHOICES),
                                           verbose_name=_('time period days of week'),
-                                          null=True, blank=True)
+                                          null=True, blank=True, default=list)
 
     objects = EventAreaQuerySet.as_manager()
 
