@@ -1,9 +1,13 @@
+from decimal import Decimal
+
 from django.contrib.gis.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
+
+from parkings.models.mixins import TimestampedModelMixin, UUIDPrimaryKeyMixin
 
 from .enforcement_domain import EnforcementDomain
 from .parking_area import AbstractParkingArea, ParkingArea, ParkingAreaQuerySet
@@ -75,6 +79,8 @@ class EventArea(AbstractParkingArea):
         for parking_area in ParkingArea.objects.all():
             if self.geom.intersects(parking_area.geom):
                 self.parking_areas.add(parking_area)
+        if not EventAreaStatistics.objects.filter(event_area=self).exists():
+            EventAreaStatistics.objects.create(event_area=self)
 
     def __str__(self):
         return 'Event Area %s' % str(self.origin_id)
@@ -95,3 +101,15 @@ class EventArea(AbstractParkingArea):
         if getattr(self, 'time_period_time_start') and getattr(self, 'time_period_time_end'):
             if self.time_period_time_start > self.time_period_time_end:
                 raise ValidationError(_('"time_period_time_start" cannot be after "time_period_time_end".'))
+
+
+class EventAreaStatistics(TimestampedModelMixin, UUIDPrimaryKeyMixin):
+
+    event_area = models.OneToOneField(EventArea, on_delete=models.SET_NULL,
+                                      blank=True, null=True, related_name='statistics',
+                                      verbose_name=_('event area statistics'))
+    total_parking_count = models.PositiveIntegerField(
+        default=0, verbose_name=_('total parking count'))
+    total_parking_income = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name=_('total parking income'))
+    total_parking_charges = models.PositiveIntegerField(default=0, verbose_name=_('total number of charges'))
