@@ -1,5 +1,5 @@
 from .enforcement_domain import EnforcementDomain, Enforcer
-from .event_area import EventArea
+from .event_area import EventArea, EventAreaStatistics
 from .event_parking import EventParking
 from .monitor import Monitor
 from .operator import Operator
@@ -19,6 +19,7 @@ __all__ = [
     'Enforcer',
     'EventArea',
     'EventParking',
+    'EventAreaStatistics',
     'Monitor',
     'Operator',
     'Parking',
