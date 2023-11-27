@@ -5,9 +5,10 @@ from django.db import models
 
 from .admin_utils import ReadOnlyAdmin, WithAreaField
 from .models import (
-    ArchivedParking, EnforcementDomain, Enforcer, EventArea, EventParking,
-    Monitor, Operator, Parking, ParkingArea, ParkingCheck, ParkingTerminal,
-    PaymentZone, Permit, PermitArea, PermitLookupItem, PermitSeries, Region)
+    ArchivedParking, EnforcementDomain, Enforcer, EventArea,
+    EventAreaStatistics, EventParking, Monitor, Operator, Parking, ParkingArea,
+    ParkingCheck, ParkingTerminal, PaymentZone, Permit, PermitArea,
+    PermitLookupItem, PermitSeries, Region)
 
 
 @admin.register(Enforcer)
@@ -113,6 +114,27 @@ class EventParkingAdmin(OSMGeoAdmin):
     ordering = ('-time_start',)
     search_fields = ['registration_number']
     exclude = ['location_gk25fin']
+
+
+@admin.register(EventAreaStatistics)
+class EventAreaStatisticsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'event_area_origin_id', 'total_parking_count',
+                    'price', 'total_parking_charges', 'total_parking_income']
+    ordering = ('-created_at',)
+
+    def price(self, obj):
+        return obj.event_area.price,
+
+    def event_area_origin_id(self, obj):
+        if getattr(obj, 'event_area', False):
+            return obj.event_area.origin_id
+        return None
+
+    def get_readonly_fields(self, request, obj=None):
+        return [f.name for f in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(ParkingCheck)
