@@ -160,16 +160,12 @@ def test_get_list_check_data(api_client, event_parking_factory, event_area_facto
 
 
 def test_get_detail_check_data(api_client, event_parking_factory, event_area):
-    # with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
     event_parking_factory.create_batch(3, event_area=event_area)
-
     stats_data = get(api_client, get_detail_url(event_area))
     assert stats_data.keys() == {'id', 'current_parking_count'}
     assert stats_data['current_parking_count'] == 0
 
-    # with patch('parkings.models.event_parking.get_closest_area', return_value=event_area):
     event_parking_factory(event_area=event_area)
-
     stats_data = get(api_client, get_detail_url(event_area))
     assert stats_data['current_parking_count'] == 4
 
