@@ -4,6 +4,7 @@ from math import ceil
 from django.db import transaction
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
+from django.utils import timezone
 
 from parkings.models import EventParking
 
@@ -17,11 +18,13 @@ def update_statistics(event_area):
     num_charges = 0
     if event_area.price_unit_length:
         for event_parking in qs:
-            time_delta = event_parking.time_end - event_parking.time_start
-            time_delta = event_parking.time_end - event_parking.time_start
-            hours_parked = ceil(time_delta.total_seconds() / 3600)
-            num_charges += ceil(hours_parked / event_area.price_unit_length)
-
+            if event_parking.time_start:
+                time_end = event_parking.time_end
+                if not time_end:
+                    time_end = timezone.now()
+                time_delta = time_end - event_parking.time_start
+                hours_parked = ceil(time_delta.total_seconds() / 3600)
+                num_charges += ceil(hours_parked / event_area.price_unit_length)
         statistics.total_parking_charges = num_charges
         statistics.total_parking_income = Decimal(str(num_charges * price))
     statistics.save()
