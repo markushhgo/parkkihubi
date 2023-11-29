@@ -97,6 +97,33 @@ def test_event_area_statisics_when_event_parkings_are_deleted(event_area_data, e
 
 
 @pytest.mark.django_db
+def test_event_area_statisics_event_parking_time_end_null(event_area_data, operator, event_parking_factory):
+    now = timezone.now()
+    price = 0.5
+    price_unit_length = 5
+    event_area_data['price'] = Decimal(price)
+    event_area_data['price_unit_length'] = price_unit_length
+    event_area = EventArea.objects.create(**event_area_data)
+    num_parkings = 3
+    event_parking_factory.create_batch(num_parkings, event_area=event_area,
+                                       time_start=now - timedelta(hours=4), time_end=None)
+    event_area.refresh_from_db()
+    statistics = event_area.statistics
+    assert statistics.total_parking_count == num_parkings
+    assert statistics.total_parking_charges == num_parkings
+    assert statistics.total_parking_income == Decimal(str(statistics.total_parking_charges * price))
+    num_parkings_to_add = 3
+    num_parkings += num_parkings_to_add
+    event_parking_factory.create_batch(num_parkings_to_add, event_area=event_area,
+                                       time_start=now - timedelta(hours=7), time_end=None)
+    event_area.refresh_from_db()
+    statistics = event_area.statistics
+    assert statistics.total_parking_count == num_parkings
+    assert statistics.total_parking_charges == num_parkings + num_parkings_to_add
+    assert statistics.total_parking_income == Decimal(str(statistics.total_parking_charges * price))
+
+
+@pytest.mark.django_db
 def test_event_area_statistics_multiple_additions_and_deletions(event_area_data, operator, event_parking_factory):
     now = timezone.now()
     price = 1.5
