@@ -140,6 +140,14 @@ def test_post_event_parking(operator_api_client, new_event_parking_data, event_a
     assert location_gk25fin.wkt == new_event_parking.location_gk25fin.wkt
 
 
+def test_post_event_parking_with_time_end_null(operator_api_client, new_event_parking_data, event_area):
+    new_event_parking_data['time_end'] = None
+    response_data = post(operator_api_client, list_url, new_event_parking_data)
+    check_response_data(new_event_parking_data, response_data)
+    new_event_parking = EventParking.objects.get(id=response_data['id'])
+    check_data_matches_object(new_event_parking_data, new_event_parking)
+
+
 def test_post_event_parking_without_event_area(operator_api_client, event_parking_data_outside_event_areas, event_area):
     post(operator_api_client, list_url, event_parking_data_outside_event_areas, 400)
     assert EventParking.objects.count() == 0
