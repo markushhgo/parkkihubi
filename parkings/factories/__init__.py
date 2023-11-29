@@ -1,5 +1,6 @@
 from .enforcement_domain import EnforcementDomainFactory, EnforcerFactory
 from .event_area import EventAreaFactory
+from .event_area_statistics import EventAreaStatisticsFactory
 from .event_parking import (
     CompleteEventParkingFactory, EventParkingFactory,
     HistoryEventParkingFactory)
@@ -23,6 +24,7 @@ __all__ = [
     'DiscParkingFactory',
     'EventAreaFactory',
     'EventParkingFactory',
+    'EventAreaStatisticsFactory',
     'HistoryEventParkingFactory',
     'HistoryParkingFactory',
     'OperatorFactory',
