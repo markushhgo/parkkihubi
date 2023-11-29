@@ -2,6 +2,7 @@
 
 import datetime
 import json
+from datetime import timedelta
 
 import pytest
 from django.contrib.gis.geos import MultiPolygon, Point, Polygon
@@ -92,7 +93,6 @@ def create_permit(domain, permit_series=None, end_time=None):
 def test_check_parking_allowed_event_parking(enforcer_api_client, event_parking_factory, enforcer):
     event_parking = event_parking_factory(registration_number="ABC-123", domain=enforcer.enforced_domain)
     response = enforcer_api_client.post(list_url, data=PARKING_DATA)
-
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is True
     assert response.data["end_time"] == event_parking.time_end
@@ -103,7 +103,6 @@ def test_check_parking_allowed_event_parking(enforcer_api_client, event_parking_
 
 def test_check_parking_not_allowed_event_parking(enforcer_api_client, event_parking_factory, enforcer):
     event_parking_factory(registration_number="CBA-123", domain=enforcer.enforced_domain)
-
     response = enforcer_api_client.post(list_url, data=PARKING_DATA)
 
     assert response.status_code == HTTP_200_OK
@@ -112,6 +111,22 @@ def test_check_parking_not_allowed_event_parking(enforcer_api_client, event_park
 
     assert ParkingCheck.objects.filter(
         registration_number=PARKING_DATA["registration_number"]).first().result["allowed"] is False
+
+
+def test_check_event_parking_with_time_end_null(enforcer_api_client, event_parking_factory, enforcer):
+    time_end = None
+    now = timezone.now()
+    time_start = now - timedelta(hours=1)
+    event_parking_factory(registration_number="ABC-123", domain=enforcer.enforced_domain,
+                          time_start=time_start, time_end=time_end)
+
+    response = enforcer_api_client.post(list_url, data=PARKING_DATA)
+    assert response.status_code == HTTP_200_OK
+    assert response.data["allowed"] is True
+    assert response.data["end_time"] is None
+
+    assert ParkingCheck.objects.filter(
+        registration_number=PARKING_DATA["registration_number"]).first().result["allowed"] is True
 
 
 def test_check_parking_required_fields(enforcer_api_client):
