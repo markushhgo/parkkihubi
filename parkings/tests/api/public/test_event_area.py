@@ -7,7 +7,6 @@ from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
 
-
 from ..utils import check_method_status_codes, get, get_ids_from_results
 
 list_url = reverse('public:v1:eventarea-list')
