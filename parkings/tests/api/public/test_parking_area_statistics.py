@@ -105,6 +105,11 @@ def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator
     stats_data = find_by_obj_id(parking_area, results)
     assert stats_data['current_parking_count'] == 10
 
+    # Add event parking with time_end not defined
+    create_event_parking(location, operator, enforcer.enforced_domain, now - timedelta(hours=2), None)
+    results = get(api_client, list_url)['results']
+    stats_data = find_by_obj_id(parking_area, results)
+    assert stats_data['current_parking_count'] == 11
     # Test event parkings that are in overlapping event area, but not in the event parking
     location = Point(GEOM_PARTIAL_OVERLAP_ON_WEST[0])
     for i in range(5):
@@ -113,7 +118,7 @@ def test_overlapping_event_areas(api_client, parking_factory, enforcer, operator
 
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(parking_area, results)
-    assert stats_data['current_parking_count'] == 10
+    assert stats_data['current_parking_count'] == 11
 
 
 def test_disallowed_methods(api_client, parking_area):

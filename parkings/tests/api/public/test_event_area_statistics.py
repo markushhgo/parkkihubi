@@ -170,6 +170,12 @@ def test_get_detail_check_data(api_client, event_parking_factory, event_area):
     assert stats_data['current_parking_count'] == 4
 
 
+def test_get_detail_check_data_time_end_null(api_client, event_parking_factory, event_area):
+    event_parking_factory.create_batch(4, event_area=event_area, time_end=None)
+    stats_data = get(api_client, get_detail_url(event_area))
+    assert stats_data['current_parking_count'] == 4
+
+
 def test_bounding_box_filter(api_client, event_area_factory):
     polygon_1 = Polygon([[10, 40], [20, 40], [20, 50], [10, 50], [10, 40]], srid=4326).transform(3879, clone=True)
     polygon_2 = Polygon([[30, 50], [40, 50], [40, 60], [30, 60], [30, 50]], srid=4326).transform(3879, clone=True)
