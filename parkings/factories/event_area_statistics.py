@@ -2,6 +2,8 @@ from decimal import Decimal
 
 import factory
 
+from parkings.models import EventAreaStatistics
+
 
 class EventAreaStatisticsFactory(factory.django.DjangoModelFactory):
 
