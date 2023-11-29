@@ -27,7 +27,7 @@ class EventAreaStatisticsSerializer(serializers.ModelSerializer):
                 Case(
                     When(
                         Q(event_parkings__time_start__lte=now) &
-                        Q(event_parkings__time_end__gte=now),
+                        (Q(event_parkings__time_end__gte=now) | Q(event_parkings__time_end__isnull=True)),
                         then=1,
                     )
                 )
