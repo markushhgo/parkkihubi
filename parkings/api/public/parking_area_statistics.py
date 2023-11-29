@@ -52,7 +52,8 @@ class ParkingAreaStatisticsSerializer(serializers.ModelSerializer):
             Case(
                 When(
                     Q(overlapping_event_areas__event_parkings__time_start__lte=now) &
-                    Q(overlapping_event_areas__event_parkings__time_end__gte=now) &
+                    (Q(overlapping_event_areas__event_parkings__time_end__gte=now) |
+                     Q(overlapping_event_areas__event_parkings__time_end__isnull=True)) &
                     Q(geom__intersects=F("overlapping_event_areas__event_parkings__location_gk25fin")),
                     then=1,
                 ),
