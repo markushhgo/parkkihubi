@@ -36,4 +36,7 @@ class EventParking(AbstractParking):
         if not hasattr(self, 'event_area'):
             raise ValidationError(_('No event area found in location or no "event_area_id" paramater provided'))
 
+        if not self.event_area.is_active:
+            raise ValidationError(_('EventArea {} is not active').format(str(self.event_area.id)))
+
         super().save(update_fields=update_fields, *args, **kwargs)
