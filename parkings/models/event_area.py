@@ -68,6 +68,18 @@ class EventArea(AbstractParkingArea):
 
     objects = EventAreaQuerySet.as_manager()
 
+    @property
+    def is_active(self):
+        now = timezone.now()
+        active = self.time_start <= now and self.time_end >= now
+        if self.time_period_time_start and self.time_period_time_end:
+            iso_weekday = now.isoweekday()
+            active_period = (self.time_period_time_start <= now and
+                             self.time_period_time_end >= now and
+                             iso_weekday in self.time_period_days_of_week)
+            active = active & active_period
+        return active
+
     class Meta:
         verbose_name = _('event area')
         verbose_name_plural = _('event areas')
@@ -76,9 +88,11 @@ class EventArea(AbstractParkingArea):
         # Force custom validation
         self.clean()
         super().save(*args, **kwargs)
+        # Add overlapping parking areas
         for parking_area in ParkingArea.objects.all():
             if self.geom.intersects(parking_area.geom):
                 self.parking_areas.add(parking_area)
+
         if not EventAreaStatistics.objects.filter(event_area=self).exists():
             EventAreaStatistics.objects.create(event_area=self)
 
