@@ -75,6 +75,15 @@ def test_price(event_area):
 
 
 @pytest.mark.django_db
+def test_description(event_area):
+    test_description = "Test"
+    event_area.description = test_description
+    event_area.save()
+    event_area.refresh_from_db()
+    assert event_area.description == test_description
+
+
+@pytest.mark.django_db
 def test_model_clean(event_area):
     now = timezone.now()
     event_area.time_period_time_end = now + timedelta(hours=2)
