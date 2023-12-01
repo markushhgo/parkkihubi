@@ -4,6 +4,7 @@ from datetime import timedelta
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from parkings.models import EventParking
 from parkings.models.constants import GK25FIN_SRID
@@ -99,8 +100,7 @@ def test_event_parking_required_fields(operator_api_client, event_parking):
                           expected_required_fields, detail_endpoint=True)
 
 
-def test_post_event_parking_with_event_area_id(operator_api_client, new_event_parking_data, event_area_factory):
-    event_area = event_area_factory()
+def test_post_event_parking_with_event_area_id(operator_api_client, new_event_parking_data, event_area):
     new_event_parking_data['event_area_id'] = str(event_area.id)
     response_data = post(operator_api_client, list_url, new_event_parking_data)
     check_response_data(new_event_parking_data, response_data)
@@ -146,6 +146,12 @@ def test_post_event_parking_with_time_end_null(operator_api_client, new_event_pa
     check_response_data(new_event_parking_data, response_data)
     new_event_parking = EventParking.objects.get(id=response_data['id'])
     check_data_matches_object(new_event_parking_data, new_event_parking)
+
+
+def test_post_event_parking_with_event_area_not_active(operator_api_client, new_event_parking_data, event_area_factory):
+    now = timezone.now()
+    event_area_factory(time_start=now - timedelta(days=10), time_end=now - timedelta(days=9))
+    post(operator_api_client, list_url, new_event_parking_data, 400)
 
 
 def test_post_event_parking_without_event_area(operator_api_client, event_parking_data_outside_event_areas, event_area):
