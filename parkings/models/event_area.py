@@ -66,6 +66,8 @@ class EventArea(AbstractParkingArea):
                                           verbose_name=_('time period days of week'),
                                           null=True, blank=True, default=list)
 
+    description = models.TextField(null=True, blank=True, verbose_name=_('description'))
+
     objects = EventAreaQuerySet.as_manager()
 
     @property
