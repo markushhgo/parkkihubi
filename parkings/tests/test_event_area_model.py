@@ -13,6 +13,39 @@ def test_str():
 
 
 @pytest.mark.django_db
+def test_event_area_is_active_property(event_area_factory):
+    now = timezone.now()
+    event_area = event_area_factory(time_start=now - timedelta(hours=1), time_end=now + timedelta(hours=1))
+    assert event_area.is_active is True
+
+    event_area = event_area_factory(time_start=now - timedelta(hours=2), time_end=now - timedelta(hours=1))
+    assert event_area.is_active is False
+
+    # Test time periods
+    iso_weekday = now.isoweekday()
+    event_area = event_area_factory(time_start=now - timedelta(hours=1),
+                                    time_end=now + timedelta(hours=1),
+                                    time_period_days_of_week=[iso_weekday],
+                                    time_period_time_start=now - timedelta(hours=1),
+                                    time_period_time_end=now + timedelta(hours=1))
+    assert event_area.is_active is True
+    # Correct day of week, but time_period_time_start and time_period_time_end is past now
+    event_area = event_area_factory(time_start=now - timedelta(hours=1),
+                                    time_end=now + timedelta(hours=1),
+                                    time_period_days_of_week=[iso_weekday],
+                                    time_period_time_start=now - timedelta(hours=2),
+                                    time_period_time_end=now - timedelta(hours=1))
+    assert event_area.is_active is False
+    # Time periods are correct, but incorrect day of week
+    event_area = event_area_factory(time_start=now - timedelta(hours=1),
+                                    time_end=now + timedelta(hours=1),
+                                    time_period_days_of_week=[iso_weekday + 1],
+                                    time_period_time_start=now - timedelta(hours=1),
+                                    time_period_time_end=now + timedelta(hours=1))
+    assert event_area.is_active is False
+
+
+@pytest.mark.django_db
 def test_estimated_capacity(event_area):
     event_area.capacity_estimate = 123
     assert event_area.estimated_capacity == 123
