@@ -148,7 +148,7 @@ def test_post_event_parking_with_time_end_null(operator_api_client, new_event_pa
     check_data_matches_object(new_event_parking_data, new_event_parking)
 
 
-def test_post_event_parking_with_event_area_not_active(operator_api_client, new_event_parking_data, event_area_factory):
+def test_post_event_parking_to_event_area_not_active(operator_api_client, new_event_parking_data, event_area_factory):
     now = timezone.now()
     event_area_factory(time_start=now - timedelta(days=10), time_end=now - timedelta(days=9))
     post(operator_api_client, list_url, new_event_parking_data, 400)
