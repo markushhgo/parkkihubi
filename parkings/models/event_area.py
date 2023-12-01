@@ -110,11 +110,11 @@ class EventArea(AbstractParkingArea):
                 not bool(self.time_period_time_start and self.time_period_time_end and self.time_period_days_of_week)):
             raise ValidationError(_('Provide "start time", "end time" and "days of week" for Time period.'))
 
-        if getattr(self, 'time_start') and getattr(self, 'time_end'):
+        if self.time_start and self.time_end:
             if self.time_start > self.time_end:
                 raise ValidationError(_('"time_start" cannot be after "time_end".'))
 
-        if getattr(self, 'time_period_time_start') and getattr(self, 'time_period_time_end'):
+        if self.time_period_time_start and self.time_period_time_end:
             if self.time_period_time_start > self.time_period_time_end:
                 raise ValidationError(_('"time_period_time_start" cannot be after "time_period_time_end".'))
 
