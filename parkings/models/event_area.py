@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from django.contrib.gis.db import models
@@ -112,11 +113,27 @@ class EventArea(AbstractParkingArea):
 
         if self.time_start and self.time_end:
             if self.time_start > self.time_end:
-                raise ValidationError(_('"time_start" cannot be after "time_end".'))
+                raise ValidationError(_('"time_start" cannot be after "time_end"'))
 
         if self.time_period_time_start and self.time_period_time_end:
             if self.time_period_time_start > self.time_period_time_end:
                 raise ValidationError(_('"time_period_time_start" cannot be after "time_period_time_end".'))
+
+        if (not self.price and self.price_unit_length is not None or
+                self.price is not None and not self.price_unit_length):
+            raise ValidationError(_('If chargeable, both "price" and "price unit length" must be set'))
+
+        if self.price is not None and self.price < 0:
+            raise ValidationError(_('"price" can not be negative'))
+
+        # Validate that the time period is not shorter than the price_unit_length,
+        # if shorter, the price_unit_length would be obsolete.
+        if self.price_unit_length is not None and has_time_period:
+            time_start = datetime.combine(datetime.today(), self.time_period_time_start)
+            time_end = datetime.combine(datetime.today(), self.time_period_time_end)
+            time_delta = time_end - time_start
+            if time_delta.total_seconds() / 3600 < self.price_unit_length:
+                raise ValidationError(_('Time period is shorter than "price unit length"'))
 
 
 class EventAreaStatistics(TimestampedModelMixin, UUIDPrimaryKeyMixin):
