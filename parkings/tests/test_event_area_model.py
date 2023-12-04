@@ -63,6 +63,7 @@ def test_estimate_capacity_by_area(event_area):
 @pytest.mark.django_db
 def test_price(event_area):
     event_area.price = Decimal('4.56')
+    event_area.price_unit_length = 1
     event_area.save()
     event_area.refresh_from_db()
     assert event_area.price == Decimal('4.56')
@@ -84,7 +85,7 @@ def test_description(event_area):
 
 
 @pytest.mark.django_db
-def test_model_clean(event_area):
+def test_model_clean_on_time_fields(event_area):
     now = timezone.now()
     event_area.time_period_time_end = now + timedelta(hours=2)
     with pytest.raises(ValidationError, match='Provide "start time",'):
@@ -102,11 +103,43 @@ def test_model_clean(event_area):
         assert False, 'event_area.save() raised and exception {}'.format(exc)
 
     event_area.time_start = event_area.time_end + timedelta(hours=1)
-    with pytest.raises(ValidationError, match='"time_start" cannot be after "time_end".'):
+    with pytest.raises(ValidationError, match='"time_start" cannot be after "time_end"'):
         event_area.save()
 
     event_area.time_start = now - timedelta(hours=1)
     event_area.time_period_time_start = now + timedelta(hours=1)
     event_area.time_period_time_end = now
     with pytest.raises(ValidationError, match='"time_period_time_start" cannot be after'):
+        event_area.save()
+
+
+@pytest.mark.django_db
+def test_model_clean_on_fields_price_and_price_unit_length(event_area):
+    now = timezone.now()
+
+    event_area.price = Decimal(str('0.50'))
+    with pytest.raises(ValidationError, match='If chargeable, both "price" and'):
+        event_area.save()
+
+    event_area.price = None
+    event_area.price_unit_length = 2
+    with pytest.raises(ValidationError, match='If chargeable, both "price" and'):
+        event_area.save()
+
+    event_area.price = Decimal(str('-0.50'))
+    event_area.price_unit_length = 4
+    with pytest.raises(ValidationError, match='"price" can not be negative'):
+        event_area.save()
+
+    event_area.price = Decimal(str('0.50'))
+    # Time period one minute longer than price_unit_length
+    event_area.time_period_time_start = (now - timedelta(hours=2)).time()
+    event_area.time_period_time_end = (now + timedelta(hours=2, minutes=1)).time()
+    event_area.time_period_days_of_week = [1, 2, 3, 4, 5]
+    event_area.save()
+
+    # Time period shorter than price_unit_length
+    event_area.time_period_time_start = (now - timedelta(hours=1)).time()
+    event_area.time_period_time_end = (now + timedelta(hours=1)).time()
+    with pytest.raises(ValidationError, match='Time period is shorter than "price unit length"'):
         event_area.save()
