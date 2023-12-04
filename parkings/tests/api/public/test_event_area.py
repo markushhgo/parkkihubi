@@ -46,18 +46,13 @@ def test_get_list_check_data(api_client, event_area):
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
-def test_priced_event_area(api_client, event_area):
-    event_area.price = Decimal('1.23')
-    event_area.save()
-    feature_data = get(api_client, get_detail_url(event_area))
-    assert feature_data['properties']['price'] == '1.23'
-
-
-def test_event_area_with_price_unit_lenght(api_client, event_area):
+def test_event_area_with_price_and_price_unit_lenght(api_client, event_area):
+    event_area.price = Decimal(str('1.23'))
     event_area.price_unit_length = 8
     event_area.save()
     feature_data = get(api_client, get_detail_url(event_area))
     assert feature_data['properties']['price_unit_length'] == 8
+    assert feature_data['properties']['price'] == '1.23'
 
 
 def test_event_area_with_bus_stop_numbers(api_client, event_area):
