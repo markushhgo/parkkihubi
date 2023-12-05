@@ -88,7 +88,7 @@ class EventArea(AbstractParkingArea):
         verbose_name_plural = _('event areas')
 
     def save(self, *args, **kwargs):
-        # Force custom validation
+        # Force custom validation, so it can be used for both admin and model.
         self.clean()
         super().save(*args, **kwargs)
         # Add overlapping parking areas
