@@ -1,6 +1,5 @@
 from django.contrib.gis.db import models
 from django.utils.translation import ugettext_lazy as _
-from rest_framework.exceptions import ValidationError
 
 from parkings.models.event_area import EventArea
 from parkings.models.parking import (
@@ -30,13 +29,7 @@ class EventParking(AbstractParking):
         if not self.domain_id:
             self.domain = EnforcementDomain.get_default_domain()
 
-        if (update_fields is None or 'event_area' in update_fields) and not hasattr(self, 'event_area'):
+        if (update_fields is None or 'event_area' in update_fields) and not getattr(self, 'event_area', None):
             self.event_area = get_closest_area(self.location, self.domain, area_model=EventArea)
-
-        if not hasattr(self, 'event_area'):
-            raise ValidationError(_('No event area found in location or no "event_area_id" paramater provided'))
-
-        if not self.event_area.is_active:
-            raise ValidationError(_('EventArea {} is not active').format(str(self.event_area.id)))
 
         super().save(update_fields=update_fields, *args, **kwargs)
