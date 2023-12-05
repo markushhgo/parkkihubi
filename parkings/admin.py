@@ -102,6 +102,9 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
             if form.instance.geom.intersects(parking_area.geom):
                 form.instance.parking_areas.add(parking_area)
 
+    def has_delete_permission(self, request, obj=None):
+        return False
+
 
 @admin.register(EventParking)
 class EventParkingAdmin(OSMGeoAdmin):
