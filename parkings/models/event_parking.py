@@ -22,8 +22,8 @@ class EventParking(AbstractParking):
 
     objects = EventParkingQuerySet.as_manager()
     event_area = models.ForeignKey(
-        EventArea, on_delete=models.SET_DEFAULT, verbose_name=_("event area"), null=False,
-        default=None,
+        EventArea, on_delete=models.SET_NULL, verbose_name=_("event area"), null=True,
+        blank=True,
     )
 
     def save(self, update_fields=None, *args, **kwargs):
