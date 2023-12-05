@@ -12,7 +12,9 @@ from parkings.models import EventParking
 @transaction.atomic
 def update_statistics(event_area):
     price = getattr(event_area, 'price', 0)
-    statistics = event_area.statistics
+    statistics = getattr(event_area, 'statistics', None)
+    if not statistics:
+        return
     qs = EventParking.objects.filter(event_area=event_area)
     statistics.total_parking_count = qs.count()
     num_charges = 0
