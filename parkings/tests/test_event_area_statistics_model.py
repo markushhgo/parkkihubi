@@ -77,6 +77,8 @@ def test_event_area_statisics_when_event_parkings_are_deleted(event_area_data, e
     event_parking_factory.create_batch(num_parkings, event_area=event_area, time_start=now,
                                        time_end=now + timedelta(hours=parking_length_h))
     statistics = event_area.statistics
+    statistics.refresh_from_db()
+
     assert statistics.total_parking_count == num_parkings
     assert statistics.total_parking_charges == num_parkings * 2
     assert statistics.total_parking_income == Decimal(str(statistics.total_parking_charges * price))
@@ -141,7 +143,6 @@ def test_event_area_statistics_multiple_additions_and_deletions(event_area_data,
             'time_end': now + timedelta(hours=i * price_unit_length)
         }
         EventParking.objects.create(**event_parking_data)
-
     event_area.refresh_from_db()
     statistics = event_area.statistics
     assert statistics.total_parking_count == num_parkings
