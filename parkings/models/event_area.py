@@ -124,7 +124,7 @@ class EventArea(AbstractParkingArea):
             raise ValidationError(_('If chargeable, both "price" and "price unit length" must be set'))
 
         if self.price is not None and self.price < 0:
-            raise ValidationError(_('"price" can not be negative'))
+            raise ValidationError(_('"price" cannot be negative'))
 
         # Validate that the time period is not shorter than the price_unit_length,
         # if shorter, the price_unit_length would be obsolete.

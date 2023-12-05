@@ -128,7 +128,7 @@ def test_model_clean_on_fields_price_and_price_unit_length(event_area):
 
     event_area.price = Decimal(str('-0.50'))
     event_area.price_unit_length = 4
-    with pytest.raises(ValidationError, match='"price" can not be negative'):
+    with pytest.raises(ValidationError, match='"price" cannot be negative'):
         event_area.save()
 
     event_area.price = Decimal(str('0.50'))
