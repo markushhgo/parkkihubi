@@ -5,6 +5,8 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework import mixins, serializers, viewsets
 
 from parkings.models import EnforcementDomain, EventArea, EventParking
+from parkings.models.constants import WGS84_SRID
+from parkings.models.utils import get_closest_area
 
 from ..common import ParkingException
 from .permissions import IsOperator
@@ -67,11 +69,31 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
 
         if time_end is not None and time_start > time_end:
             raise serializers.ValidationError(_('"time_start" cannot be after "time_end".'))
+
         if data.get('event_area_id', False):
             if not EventArea.objects.filter(id=data.get('event_area_id')).exists():
                 raise serializers.ValidationError(
                     _('EventArea with event_area_id: {} does not exist.').format(data.get('event_area_id')))
+
         return data
+
+    def create(self, validated_data):
+        event_area = EventArea.objects.filter(id=validated_data.get('event_area_id', None)).first()
+        if not event_area:
+            location = validated_data.get('location')
+            if not location.srid:
+                location.srid = WGS84_SRID
+            event_area = get_closest_area(location, validated_data.get('domain',), area_model=EventArea)
+
+        if not event_area:
+            raise serializers.ValidationError(_('No event area found in given location'))
+        else:
+            validated_data['event_area_id'] = event_area.id
+
+        if not event_area.is_active:
+            raise serializers.ValidationError(_('EventArea {} is not active').format(str(event_area.id)))
+        
+        return EventParking.objects.create(**validated_data)
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
