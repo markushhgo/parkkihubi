@@ -75,6 +75,8 @@ class EventAreaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance:
+            self.initial['time_period_days_of_week'] = tuple(self.instance.time_period_days_of_week)
         self.fields['time_period_days_of_week'].widget = forms.CheckboxSelectMultiple(
             choices=EventArea.ISO_DAYS_OF_WEEK_CHOICES)
 
