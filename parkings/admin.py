@@ -87,7 +87,7 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     area_scale = 1
     list_display = ['id', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
                     'time_period_time_end', 'days_of_week', 'price', 'price_unit_length',
-                    'capacity_estimate', 'estimated_capacity', 'area', 'parking_areas']
+                    'capacity_estimate', 'estimated_capacity', 'area', 'overlapping_parking_areas']
     list_filter = ['domain']
     ordering = ('origin_id',)
     exclude = ('parking_areas',)
@@ -95,8 +95,8 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     def days_of_week(self, obj):
         return '\n'.join(EventArea.ISO_DAYS_OF_WEEK_CHOICES[d - 1][1] for d in obj.time_period_days_of_week)
 
-    def parking_areas(self, obj):
-        return '\n'.join(p.origin_id for p in obj.parking_areas.all())
+    def overlapping_parking_areas(self, obj):
+        return '\n'.join(p.origin_id for p in obj.parking_areas.all() if p is not None)
 
     def save_related(self, request, form, formsets, change):
         super(EventAreaAdmin, self).save_related(request, form, formsets, change)
