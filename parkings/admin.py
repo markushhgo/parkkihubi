@@ -51,6 +51,7 @@ class ParkingAdmin(OSMGeoAdmin):
     list_filter = ['operator', 'domain', 'zone']
     ordering = ('-time_start',)
     search_fields = ['registration_number']
+    exclude = ['location_gk25fin']
 
 
 @admin.register(Region)
