@@ -31,8 +31,11 @@ def test_get_list_check_data(api_client, event_parking_factory, event_area_facto
     stats_data = get(api_client, list_url)
     assert stats_data['count'] == num_statistics
     results = stats_data['results']
-    for i in range(num_statistics):
-        assert results[i]['total_parking_count'] == 5 - i
+    assert results[0]['total_parking_count'] == 5
+    assert results[1]['total_parking_count'] == 4
+    assert results[2]['total_parking_count'] == 0
+    assert results[3]['total_parking_count'] == 0
+    assert results[4]['total_parking_count'] == 0
 
 
 @pytest.mark.django_db
@@ -42,3 +45,12 @@ def test_get_detail_check_data(api_client, event_parking_factory, event_area_fac
     stats_data = get(api_client, get_detail_url(event_area.statistics))
     assert stats_data.keys() == {'id', 'total_parking_count'}
     assert stats_data['total_parking_count'] == 9
+
+
+@pytest.mark.django_db
+def test_get_detail_check_data_blurred(api_client, event_parking_factory, event_area_factory):
+    event_area = event_area_factory.create()
+    event_parking_factory.create_batch(3, event_area=event_area)
+    stats_data = get(api_client, get_detail_url(event_area.statistics))
+    assert stats_data.keys() == {'id', 'total_parking_count'}
+    assert stats_data['total_parking_count'] == 0
