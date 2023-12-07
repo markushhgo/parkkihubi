@@ -93,7 +93,7 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     exclude = ('parking_areas',)
 
     def days_of_week(self, obj):
-        return '\n'.join(EventArea.ISO_DAYS_OF_WEEK_CHOICES[d][1] for d in obj.time_period_days_of_week)
+        return '\n'.join(EventArea.ISO_DAYS_OF_WEEK_CHOICES[d - 1][1] for d in obj.time_period_days_of_week)
 
     def parking_areas(self, obj):
         return '\n'.join(p.origin_id for p in obj.parking_areas.all())
