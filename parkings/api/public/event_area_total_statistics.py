@@ -3,8 +3,15 @@ from rest_framework import permissions, serializers, viewsets
 from parkings.models import EventAreaStatistics
 from parkings.pagination import Pagination
 
+from .utils import blur_count
+
 
 class EventAreaTotalStatisticsSerializer(serializers.ModelSerializer):
+
+    total_parking_count = serializers.SerializerMethodField()
+
+    def get_total_parking_count(self, area):
+        return blur_count(area.total_parking_count)
 
     class Meta:
         model = EventAreaStatistics
