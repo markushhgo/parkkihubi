@@ -1,10 +1,12 @@
 
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
+from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
+from freezegun import freeze_time
 
 from parkings.models import EventParking
 from parkings.models.constants import GK25FIN_SRID
@@ -229,3 +231,75 @@ def test_cannot_modify_other_than_own_event_parkings(operator_2_api_client, even
     put(operator_2_api_client, detail_url, new_event_parking_data, 404)
     patch(operator_2_api_client, detail_url, new_event_parking_data, 404)
     delete(operator_2_api_client, detail_url, 404)
+
+
+def test_cannot_modify_event_parking_after_modify_period(operator_api_client,
+                                                         new_event_parking_data,
+                                                         updated_event_parking_data,
+                                                         event_area):
+    start_time = datetime(2010, 1, 1, 12, 00).replace(tzinfo=timezone.utc)
+    event_area.time_start = start_time
+    event_area.time_end = start_time + timedelta(hours=1)
+    event_area.save()
+    error_message = 'Grace period has passed. Only "time_end" can be updated via PATCH.'
+    error_code = 'grace_period_over'
+
+    with freeze_time(start_time):
+        response_parking_data = post(operator_api_client, list_url, new_event_parking_data)
+
+    new_event_parking = EventParking.objects.get(id=response_parking_data['id'])
+    end_time = start_time + settings.PARKKIHUBI_TIME_EVENT_PARKINGS_EDITABLE + timedelta(minutes=1)
+
+    with freeze_time(end_time):
+
+        # PUT
+        error_data = put(operator_api_client, get_detail_url(new_event_parking), updated_event_parking_data, 403)
+        assert error_message in error_data['detail']
+        assert error_data['code'] == error_code
+
+        # PATCH other fields than 'time_end'
+        for field_name in updated_event_parking_data:
+            if field_name == 'time_end':
+                continue
+            event_parking_data = {field_name: updated_event_parking_data[field_name]}
+            error_data = patch(operator_api_client, get_detail_url(new_event_parking), event_parking_data, 403)
+            assert error_message in error_data['detail']
+            assert error_data['code'] == error_code
+
+
+def test_can_modify_time_end_after_modify_period(operator_api_client, new_event_parking_data, event_area):
+    start_time = datetime(2010, 1, 1, 12, 00).replace(tzinfo=timezone.utc)
+    event_area.time_start = start_time
+    event_area.time_end = start_time + timedelta(hours=1)
+    event_area.save()
+
+    with freeze_time(start_time):
+        response_parking_data = post(operator_api_client, list_url, new_event_parking_data)
+
+    new_event_parking = EventParking.objects.get(id=response_parking_data['id'])
+    end_time = start_time + settings.PARKKIHUBI_TIME_EVENT_PARKINGS_EDITABLE + timedelta(minutes=1)
+
+    with freeze_time(end_time):
+        event_parking_data = {'time_end': '2016-12-12T23:33:29Z'}
+        patch(operator_api_client, get_detail_url(new_event_parking), event_parking_data, 200)
+        new_event_parking.refresh_from_db()
+        assert new_event_parking.time_end.day == 12  # old day was 10
+
+
+def test_time_start_cannot_be_after_time_end(operator_api_client, event_parking, new_event_parking_data):
+    new_event_parking_data['time_start'] = '2116-12-10T23:33:29Z'
+    detail_url = get_detail_url(event_parking)
+    error_message = '"time_start" cannot be after "time_end".'
+
+    # POST
+    error_data = post(operator_api_client, list_url, new_event_parking_data, status_code=400)
+    assert error_message in error_data['non_field_errors']
+
+    # PUT
+    error_data = put(operator_api_client, detail_url, new_event_parking_data, status_code=400)
+    assert error_message in error_data['non_field_errors']
+
+    # PATCH
+    patch_data = {'time_start': '2116-12-10T23:33:29Z'}
+    error_data = patch(operator_api_client, detail_url, patch_data, status_code=400)
+    assert error_message in error_data['non_field_errors']
