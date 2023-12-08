@@ -26,22 +26,22 @@ def test_event_area_is_active_property(event_area_factory):
     event_area = event_area_factory(time_start=now - timedelta(hours=1),
                                     time_end=now + timedelta(hours=1),
                                     time_period_days_of_week=[iso_weekday],
-                                    time_period_time_start=now - timedelta(hours=1),
-                                    time_period_time_end=now + timedelta(hours=1))
+                                    time_period_time_start=(now - timedelta(hours=1)).time(),
+                                    time_period_time_end=(now + timedelta(hours=1)).time())
     assert event_area.is_active is True
     # Correct day of week, but time_period_time_start and time_period_time_end is past now
     event_area = event_area_factory(time_start=now - timedelta(hours=1),
                                     time_end=now + timedelta(hours=1),
                                     time_period_days_of_week=[iso_weekday],
-                                    time_period_time_start=now - timedelta(hours=2),
-                                    time_period_time_end=now - timedelta(hours=1))
+                                    time_period_time_start=(now - timedelta(hours=2)).time(),
+                                    time_period_time_end=(now - timedelta(hours=1)).time())
     assert event_area.is_active is False
     # Time periods are correct, but incorrect day of week
     event_area = event_area_factory(time_start=now - timedelta(hours=1),
                                     time_end=now + timedelta(hours=1),
                                     time_period_days_of_week=[iso_weekday + 1],
-                                    time_period_time_start=now - timedelta(hours=1),
-                                    time_period_time_end=now + timedelta(hours=1))
+                                    time_period_time_start=(now - timedelta(hours=1)).time(),
+                                    time_period_time_end=(now + timedelta(hours=1)).time())
     assert event_area.is_active is False
 
 
