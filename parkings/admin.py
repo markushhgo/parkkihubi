@@ -86,7 +86,7 @@ class EventAreaForm(forms.ModelForm):
 class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     form = EventAreaForm
     area_scale = 1
-    list_display = ['id', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
+    list_display = ['id', 'is_active', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
                     'time_period_time_end', 'days_of_week', 'price', 'price_unit_length',
                     'capacity_estimate', 'estimated_capacity', 'area', 'overlapping_parking_areas']
     list_filter = ['domain']
