@@ -77,8 +77,8 @@ class EventArea(AbstractParkingArea):
         active = self.time_start <= now and self.time_end >= now
         if self.time_period_time_start and self.time_period_time_end:
             iso_weekday = now.isoweekday()
-            active_period = (self.time_period_time_start <= now and
-                             self.time_period_time_end >= now and
+            active_period = (self.time_period_time_start <= now.time() and
+                             self.time_period_time_end >= now.time() and
                              iso_weekday in self.time_period_days_of_week)
             active = active & active_period
         return active
