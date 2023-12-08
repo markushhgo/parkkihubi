@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from freezegun import freeze_time
 
-from parkings.models import EventParking
+from parkings.models import EnforcementDomain, EventParking
 from parkings.models.constants import GK25FIN_SRID
 
 from ..utils import (
@@ -303,3 +303,24 @@ def test_time_start_cannot_be_after_time_end(operator_api_client, event_parking,
     patch_data = {'time_start': '2116-12-10T23:33:29Z'}
     error_data = patch(operator_api_client, detail_url, patch_data, status_code=400)
     assert error_message in error_data['non_field_errors']
+
+
+def test_default_enforcement_domain_is_used_on_event_parking_creation_if_not_specified(
+    operator_api_client, new_event_parking_data, event_area
+):
+    response_parking_data = post(operator_api_client, list_url, new_event_parking_data)
+    assert response_parking_data['domain'] == EnforcementDomain.get_default_domain().code
+
+
+def test_enforcement_domain_can_be_specified_on_parking_creation(operator_api_client,
+                                                                 new_event_parking_data,
+                                                                 event_area):
+    enforcement_domain = EnforcementDomain.objects.create(code='TKU', name='Turku')
+    event_area.domain = enforcement_domain
+    event_area.save()
+    new_event_parking_data.update(domain=enforcement_domain.code)
+
+    response_event_parking_data = post(operator_api_client, list_url, new_event_parking_data)
+
+    assert not response_event_parking_data['domain'] == EnforcementDomain.get_default_domain().code
+    assert response_event_parking_data['domain'] == enforcement_domain.code
