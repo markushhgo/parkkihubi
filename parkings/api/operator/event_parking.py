@@ -48,8 +48,10 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
 
         initial_data = getattr(self, 'initial_data', None)
 
-        if initial_data:
-            self.fields['location'].required = True
+        if (initial_data and not initial_data.get('event_area_id', False) and not initial_data.get('location', False)
+                and (self.context['request'].method == 'POST' or self.context['request'].method == 'PUT')):
+            raise serializers.ValidationError(
+                _('"location" inside an event area or "event_area_id" parameter is required'))
 
     def validate(self, data):
         if self.instance and (now() - self.instance.created_at) > settings.PARKKIHUBI_TIME_PARKINGS_EDITABLE:
@@ -80,19 +82,19 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         event_area = EventArea.objects.filter(id=validated_data.get('event_area_id', None)).first()
         if not event_area:
-            location = validated_data.get('location')
-            if not location.srid:
+            location = validated_data.get('location', None)
+            if location and not location.srid:
                 location.srid = WGS84_SRID
-            event_area = get_closest_area(location, validated_data.get('domain',), area_model=EventArea)
+            event_area = get_closest_area(location, validated_data.get('domain', None), area_model=EventArea)
 
-        if not event_area:
+        if not event_area and location:
             raise serializers.ValidationError(_('No event area found in given location'))
         else:
             validated_data['event_area_id'] = event_area.id
 
         if not event_area.is_active:
             raise serializers.ValidationError(_('EventArea {} is not active').format(str(event_area.id)))
-        
+
         return EventParking.objects.create(**validated_data)
 
     def to_representation(self, instance):
