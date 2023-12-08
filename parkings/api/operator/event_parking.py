@@ -47,7 +47,6 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
         self.fields['time_end'].timezone = pytz.utc
 
         initial_data = getattr(self, 'initial_data', None)
-
         if (initial_data and not initial_data.get('event_area_id', False) and not initial_data.get('location', False)
                 and (self.context['request'].method == 'POST' or self.context['request'].method == 'PUT')):
             raise serializers.ValidationError(
@@ -72,28 +71,32 @@ class OperatorAPIEventParkingSerializer(serializers.ModelSerializer):
         if time_end is not None and time_start > time_end:
             raise serializers.ValidationError(_('"time_start" cannot be after "time_end".'))
 
-        if data.get('event_area_id', False):
-            if not EventArea.objects.filter(id=data.get('event_area_id')).exists():
-                raise serializers.ValidationError(
-                    _('EventArea with event_area_id: {} does not exist.').format(data.get('event_area_id')))
-
         return data
 
     def create(self, validated_data):
-        event_area = EventArea.objects.filter(id=validated_data.get('event_area_id', None)).first()
+        domain = validated_data.get('domain', None)
+        event_area = None
+        event_area_id = validated_data.get('event_area_id', None)
+        if event_area_id:
+            event_area = EventArea.objects.filter(id=event_area_id, domain=domain).first()
+            if not event_area:
+                raise serializers.ValidationError(
+                    _('EventArea with event_area_id: {} does not exist in domain {}.').format(event_area_id, domain))
+
         if not event_area:
             location = validated_data.get('location', None)
             if location and not location.srid:
                 location.srid = WGS84_SRID
-            event_area = get_closest_area(location, validated_data.get('domain', None), area_model=EventArea)
+            event_area = get_closest_area(location, domain, area_model=EventArea)
 
         if not event_area and location:
-            raise serializers.ValidationError(_('No event area found in given location'))
-        else:
-            validated_data['event_area_id'] = event_area.id
+            raise serializers.ValidationError(
+                _('No event area found in given location {} and domain {}').format(location, domain))
 
         if not event_area.is_active:
             raise serializers.ValidationError(_('EventArea {} is not active').format(str(event_area.id)))
+
+        validated_data['event_area_id'] = getattr(event_area, 'id', None)
 
         return EventParking.objects.create(**validated_data)
 
