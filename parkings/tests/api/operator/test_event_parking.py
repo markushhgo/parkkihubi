@@ -137,6 +137,15 @@ def test_post_event_parking_with_non_existing_event_area_id(operator_api_client,
     post(operator_api_client, list_url, new_event_parking_data, 400)
 
 
+def test_post_event_parking_with_event_area_id_in_other_domain(operator_api_client,
+                                                               new_event_parking_data,
+                                                               event_area_factory):
+    enforcement_domain = EnforcementDomain.objects.create(code='TES', name='Test')
+    event_area = event_area_factory(domain=enforcement_domain)
+    new_event_parking_data['event_area_id'] = event_area.id
+    post(operator_api_client, list_url, new_event_parking_data, 400)
+
+
 def test_put_event_parking(operator_api_client, event_parking, updated_event_parking_data):
     detail_url = get_detail_url(event_parking)
     assert EventParking.objects.count() == 1
@@ -193,8 +202,7 @@ def test_post_event_parking_to_event_area_not_active(operator_api_client, new_ev
 def test_post_event_parking_without_event_area(operator_api_client, event_parking_data_outside_event_areas, event_area):
     post(operator_api_client, list_url, event_parking_data_outside_event_areas, 400)
     assert EventParking.objects.count() == 0
-
-    # Test that by adding event_area_id, makes post succeed
+    # Test qthat by adding event_area_id, makes post succeed
     event_parking_data_outside_event_areas['event_area_id'] = event_area.id
     post(operator_api_client, list_url, event_parking_data_outside_event_areas, 201)
     assert EventParking.objects.count() == 1
