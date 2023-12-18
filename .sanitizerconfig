@@ -171,6 +171,7 @@ strategy:
   parkings_eventareastatistics:
     id: null
     created_at: null
+    modified_at: null
     event_area_id: null
     total_parking_charges: null
     total_parking_income: null
