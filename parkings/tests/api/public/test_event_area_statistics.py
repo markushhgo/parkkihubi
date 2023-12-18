@@ -21,10 +21,10 @@ GEOM_CENTER = [
 ]
 
 GEOM_PARTIAL_OVERLAP_ON_WEST = [
-    (21.8, 60.5),  # North West corner
-    (22.25, 60.5),  # North East corner
-    (22.25, 60.0),  # South East corner
-    (21.8, 60.0),  # South West corner
+    (22.25, 60.5),  # North West corner
+    (22.75, 60.5),  # North East corner
+    (22.75, 60.0),  # South East corner
+    (22.25, 60.0),  # South West corner
 ]
 
 
@@ -116,8 +116,8 @@ def test_overlapping_event_areas(api_client, event_parking_factory, enforcer, op
     stats_data = find_by_obj_id(event_area, results)
     assert stats_data['current_parking_count'] == 10
 
-    # Test parkings that are in overlapping parking area, but not in the event parking
-    location = Point(GEOM_PARTIAL_OVERLAP_ON_WEST[0])
+    # Test parkings that are in overlapping parking area, but not inside the event parking
+    location = Point(GEOM_PARTIAL_OVERLAP_ON_WEST[1])
     for i in range(5):
         create_parking(location, operator, enforcer.enforced_domain,
                        now - timedelta(hours=2), now + timedelta(hours=2))
@@ -125,6 +125,7 @@ def test_overlapping_event_areas(api_client, event_parking_factory, enforcer, op
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(event_area, results)
     assert stats_data['current_parking_count'] == 10
+    parking_area_west.refresh_from_db()
     assert parking_area_west.parkings.count() == 5
 
 
