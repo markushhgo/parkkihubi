@@ -160,7 +160,7 @@ strategy:
     origin_id: null
     time_start: null
     time_end: null
-    parking_areas: null
+    parking_area_id: null
     price: null
     price_unit_length: null
     bus_stop_numbers: null
