@@ -125,6 +125,7 @@ strategy:
     time_end: null
     time_start: null
     zone_id: null
+    location_gk25fin: null
   parkings_parkingarea:
     capacity_estimate: null
     created_at: null
