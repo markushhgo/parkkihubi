@@ -168,7 +168,7 @@ strategy:
     time_period_time_end: null
     time_period_days_of_week: null
     description: null
-  parking_eventareastatistics:
+  parkings_eventareastatistics:
     id: null
     created_at: null
     event_area_id: null
@@ -258,6 +258,10 @@ strategy:
     id: null
     modified_at: null
     name: null
+  parkings_eventarea_parking_areas:
+    id: null
+    eventarea_id: null
+    parkingarea_id: null
   spatial_ref_sys:
     auth_name: null
     auth_srid: null
