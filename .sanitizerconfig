@@ -134,6 +134,26 @@ strategy:
     modified_at: null
     name: null
     origin_id: null
+  parkings_eventarea:
+    capacity_estimate: null
+    created_at: null
+    domain_id: null
+    geom: null
+    id: null
+    modified_at: null
+    name: null
+    origin_id: null
+    time_start: null
+    time_end: null
+    parking_areas: null
+    price: null
+    price_unit_length: null
+    bus_stop_numbers: null
+    time_period_time_start: null
+    time_period_time_end: null
+    time_period_days_of_week: null
+    description: null
+
   parkings_parkingcheck:
     allowed: null
     created_at: null
