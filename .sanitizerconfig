@@ -179,13 +179,14 @@ strategy:
     allowed: null
     created_at: null
     found_parking_id: null
+    found_event_parking_id: null
     id: null
     location: null
     performer_id: null
     registration_number: parkkihubi.registration_number
     result: null
     time: null
-    time_overridden: null
+    time_overridden: null    
   parkings_parkingterminal:
     created_at: null
     domain_id: null
