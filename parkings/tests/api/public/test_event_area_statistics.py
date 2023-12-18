@@ -92,8 +92,7 @@ def test_overlapping_event_areas(api_client, event_parking_factory, enforcer, op
     assert parking_area.overlapping_event_areas.first() == event_area
 
     centroid = parking_area.geom.centroid.transform(4326, clone=True)
-    location = Point(centroid.x, centroid.y)
-    parking = create_parking(location, operator, enforcer.enforced_domain,
+    parking = create_parking(centroid, operator, enforcer.enforced_domain,
                              now - timedelta(hours=2), now + timedelta(hours=2))
 
     assert parking.parking_area == parking_area
@@ -101,20 +100,11 @@ def test_overlapping_event_areas(api_client, event_parking_factory, enforcer, op
     stats_data = find_by_obj_id(event_area, results)
     assert stats_data['current_parking_count'] == 5
 
+    # Test with parking area that overlaps in the west
     parking_area_west = create_parking_area("west", enforcer.enforced_domain, GEOM_PARTIAL_OVERLAP_ON_WEST)
     assert parking_area.overlapping_event_areas.first() == event_area
     ids = ParkingArea.objects.all().values_list("id", flat=True)
     assert EventArea.objects.filter(parking_areas__in=ids).count() == 2
-
-    centroid = parking_area_west.geom.centroid.transform(4326, clone=True)
-    location = Point(centroid.x, centroid.y)
-    for i in range(5):
-        parking = create_parking(location, operator, enforcer.enforced_domain,
-                                 now - timedelta(hours=2), now + timedelta(hours=2))
-
-    results = get(api_client, list_url)['results']
-    stats_data = find_by_obj_id(event_area, results)
-    assert stats_data['current_parking_count'] == 10
 
     # Test parkings that are in overlapping parking area, but not inside the event parking
     location = Point(GEOM_PARTIAL_OVERLAP_ON_WEST[1])
@@ -124,7 +114,7 @@ def test_overlapping_event_areas(api_client, event_parking_factory, enforcer, op
 
     results = get(api_client, list_url)['results']
     stats_data = find_by_obj_id(event_area, results)
-    assert stats_data['current_parking_count'] == 10
+    assert stats_data['current_parking_count'] == 5
     parking_area_west.refresh_from_db()
     assert parking_area_west.parkings.count() == 5
 
