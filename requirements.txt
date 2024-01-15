@@ -25,7 +25,7 @@ django-environ==0.4.5
     # via -r requirements.in
 django-filter==2.3.0
     # via -r requirements.in
-django-sanitized-dump==1.2.1
+django-sanitized-dump==1.2.2
     # via -r requirements.in
 djangorestframework==3.14.0
     # via
@@ -52,7 +52,7 @@ pyproj==3.3.0
     # via
     #   -r requirements.in
     #   owslib
-python-dateutil==2.8.1
+python-dateutil==2.8.2
     # via owslib
 python-memcached==1.59
     # via -r requirements.in
@@ -61,7 +61,7 @@ pytz==2023.3.post1
     #   -r requirements.in
     #   django
     #   owslib
-pyyaml==5.3.1
+pyyaml==6.0.1
     # via
     #   database-sanitizer
     #   django-sanitized-dump
@@ -72,7 +72,7 @@ requests==2.25.1
     # via
     #   -r requirements.in
     #   owslib
-six==1.15.0
+six==1.16.0
     # via
     #   database-sanitizer
     #   django-sanitized-dump

@@ -7,6 +7,11 @@ RUN touch /.dockerenv
 RUN apt-get update \
     && apt-get install --yes \
         git \
+        language-pack-en \
+        language-pack-fi \
+        locales \
+        locales-all \
+        netcat \
         sudo \
         vim \
         zsh \
@@ -32,6 +37,7 @@ RUN apt-get update \
         python3-venv \
         python3-wheel
 
+RUN dpkg-reconfigure locales
 RUN useradd -m -u 1000 bew
 RUN usermod -aG sudo -s /usr/bin/zsh bew
 COPY zshrc /home/bew/.zshrc
@@ -40,11 +46,18 @@ RUN chown -R bew:bew /home/bew
 USER bew
 ENV USER=bew
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_CTYPE en_US.UTF-8
+ENV LC_ALL en_US.UTF-8
 WORKDIR /home/bew/bew
 
 COPY --chown=bew:bew . /home/bew/bew/
 
 RUN python3.10 -m venv --system-site-packages /home/bew/.venv
 RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements.txt
+RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements-dev.txt
+RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements-test.txt
+RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements-style.txt
 
 CMD /bin/zsh
