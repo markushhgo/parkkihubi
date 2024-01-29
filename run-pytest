@@ -16,6 +16,7 @@ fi
 
 echo "here 1"
 if [[ "$USE_DOCKER" == "1" ]] || [[ "$USE_DOCKER" == "yes" ]]; then
+    cp -n local_settings.py.tpl_dev local_settings.py
     docker-compose up -d
 else
     exec pytest "$@"
