@@ -50,9 +50,9 @@ if ! tty -s; then
     docker_compose_exec+=("-T")  # If there is no TTY available, pass -T
 fi
 
-# Wait until the database is ready
-echo "Running docker with command ${docker_compose_exec[@]}"
-"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
+## Wait until the database is ready
+#echo "Running docker with command ${docker_compose_exec[@]}"
+#"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
 
 set +e
 echo "here 5"
