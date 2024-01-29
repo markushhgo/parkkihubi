@@ -62,6 +62,9 @@ jobs:
       - name: Build Docker image of the app
         run: docker-compose build
 
+      - name: Copy default configuration as active
+        run: cp -n local_settings.py.tpl_dev local_settings.py
+
       - name: Start the services with docker-compose up
         run: docker-compose up -d
 
