@@ -51,7 +51,7 @@ fi
 
 echo "here 4"
 # Wait until the database is ready
-"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /home/bew/.venv/bin/true
+"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
 
 set +e
 echo "here 5"
