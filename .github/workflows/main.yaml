@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         python: ["3.10"] #3.10
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04 #ubuntu:jammy-20231004
     # container: "python:${{matrix.python}}-slim-buster"
     steps:
       - uses: actions/checkout@v3
@@ -52,7 +52,7 @@ jobs:
         uses: codecov/codecov-action@v3
 
   test-dockerization:
-    runs-on: ubuntu-22.04 #ubuntu:jammy-20231004
+    runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
 
