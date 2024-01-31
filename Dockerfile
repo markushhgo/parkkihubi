@@ -41,6 +41,7 @@ RUN dpkg-reconfigure locales
 RUN useradd -m -u 1000 bew
 RUN usermod -aG sudo -s /usr/bin/zsh bew
 COPY zshrc /home/bew/.zshrc
+COPY bashrc /home/bew/.bashrc
 RUN chown -R bew:bew /home/bew
 
 USER bew

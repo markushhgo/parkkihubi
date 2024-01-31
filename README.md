@@ -38,6 +38,53 @@ In the debug panel you can run following with debugger enabled:
 
 Happy hacking :)
 
+## Usage with docker-compose
+
+Development environment can also be run directtly with docker-compose. For this to
+work `local_settings.py` -file needs to be created. Easiest way to do this is to copy
+template file to proper location.
+
+```
+cp -n local_settings.py.tpl_dev local_settings.py
+```
+
+After this you can start docker compose environment
+
+```
+docker-compose --compatibility up
+```
+
+To run commands inside docker environment, execute shell process in `runserver`
+container. There are at least zsh and bash shells available.
+
+```
+docker-compose exec runserver /bin/zsh
+# or with bash
+docker-compose exec runserver /bin/bash
+```
+
+Vistual environment should be active by default in both shells. After this you can
+run migrations, collecstatic and other management commands inside container in
+`~/bew` -directory.
+
+### Possible problems with environment
+
+This container uses Python venv virtual environment. Command called from host system
+needs to use python executables from venv path ie. pytest needs to be run with fill
+path.
+
+```
+docker-compose exec runserver /home/bew/.venv/bin/pytest
+```
+
+This container has default user `bew` that expects your uid and git to be 1000 on
+host system to access files in docker volumes. In Ubuntu uid and gid 1000 is default
+for first user account created on system. This may lead to file permission problems.
+
+To fix this, there is docker compose file `docker-compose-root.yml` that can be used
+instead of the default one. Because commands are run with root acces inside the
+container this may create files with root permissions on the host system.
+
 ### Python requirements
 
 Use `pip-tools` to install and maintain installed dependencies. This also needs
