@@ -1,9 +1,7 @@
 #!/bin/bash
-echo 'docker-entrypoint'
 set -e
 if [ -d "$HOME/.venv/bin" ]; then
-    echo 'Activating venv'
-    export PATH="$HOME/.venv/bin:$PATH"
+    . ~/.venv/bin/activate
 fi
 
 PORT=${DJANGO_PORT:-8000}
@@ -14,7 +12,6 @@ RUN_MIGRATIONS=${RUN_MIGRATIONS}
 
 # Wait for database availability on host & port parsed from $DATABASE_URL
 if [[ -n "$DATABASE_URL" ]]; then
-    echo 'Parsing database url'
     host_port_sed_cmd='s%^[a-z]+://([^@]*@)?(([^/:]*)(:([0-9]+))?)/.*%\3:\5%'
     db_host_port=$(sed -E "${host_port_sed_cmd}" <<< "$DATABASE_URL")
     db_host=${db_host_port/:*}
@@ -26,7 +23,6 @@ if [[ -n "$DATABASE_URL" ]]; then
 fi
 
 if [[ "$RUN_MIGRATIONS" == "1" ]] || [[ "$RUN_MIGRATIONS" == "yes" ]]; then
-    echo 'Running migrations'
     ./manage.py migrate --noinput
 fi
 
@@ -38,19 +34,15 @@ if [[ "$RUN_MODE" == "debug" ]]; then
     python /tmp/debugpy --wait-for-client --listen 0.0.0.0:$DEBUG_PORT \
         manage.py runserver 0.0.0.0:$PORT --nothreading --noreload
 elif [[ "${1:0:1}" = "/" ]]; then
-    echo "Running command $@"
     exec "$@"
 elif [[ -n "$1" ]]; then
-    echo "Running management command $@"
     ./manage.py "$@"
 elif [[ "$RUN_MODE" == "production" ]]; then
-    echo 'Starging uwsgi service'
     uwsgi \
         --wsgi parkkihubi.wsgi \
         --http 0.0.0.0:$PORT \
         --enable-threads \
         --workers 4
 else
-    echo 'Starting runserver'
     ./manage.py runserver 0.0.0.0:$PORT
 fi

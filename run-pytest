@@ -8,13 +8,11 @@
 # or add USE_DOCKER=1 to the .env file.
 
 set -e
-echo "here 0"
 USE_DOCKER=${USE_DOCKER}
 if [[ -z "$USE_DOCKER" ]] && [[ -e .env ]]; then
     USE_DOCKER=$(sed -n '/^USE_DOCKER=/s/^[^=]*=//p' .env)
 fi
 
-echo "here 1"
 if [[ "$USE_DOCKER" == "1" ]] || [[ "$USE_DOCKER" == "yes" ]]; then
     cp -n local_settings.py.tpl_dev local_settings.py
     docker-compose up -d
@@ -26,7 +24,6 @@ fi
 unset xml_file
 opts=()
 
-echo "here 2"
 while [[ $# -gt 0 ]]; do
     opt="$1"
     shift
@@ -44,20 +41,17 @@ misc_opts=(
     "-o" "cache_dir=/tmp/pytest_cache"
 )
 
-echo "here 3"
 docker_compose_exec=("docker-compose" "exec")
 if ! tty -s; then
     docker_compose_exec+=("-T")  # If there is no TTY available, pass -T
 fi
 
-## Wait until the database is ready
-#echo "Running docker with command ${docker_compose_exec[@]}"
-#"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
+# Wait until the database is ready
+"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
 
 set +e
-echo "here 5"
 
-output="$("${docker_compose_exec[@]}" runserver /home/bew/.venv/bin/pytest "${misc_opts[@]}" "${opts[@]}" 2>&1)"
+"${docker_compose_exec[@]}" runserver /home/bew/.venv/bin/pytest "${misc_opts[@]}" "${opts[@]}"
 exit_code=$?
 
 set -e
@@ -66,7 +60,4 @@ if [[ -n "$xml_file" ]]; then
     "${docker_compose_exec[@]}" runserver cat /tmp/pytest_junit.xml > "$xml_file"
 fi
 
-if [ $exit_code -ne 0 ]; then
-    echo "$output"
-fi
 exit $exit_code

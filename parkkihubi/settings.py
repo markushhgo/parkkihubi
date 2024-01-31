@@ -38,20 +38,10 @@ ALLOWED_HOSTS = ['*']
 #########
 # Paths #
 #########
-default_var_root = os.path.join(BASE_DIR, 'var')
-user_var_root = os.path.expanduser('~/var')
-if os.path.isdir(user_var_root):
-    default_var_root = user_var_root
-VAR_ROOT = env.str('VAR_ROOT', default_var_root)
-
-# Create var root if it doesn't exist
-if not os.path.isdir(VAR_ROOT):
-    os.makedirs(VAR_ROOT)
-
-MEDIA_ROOT = os.path.join(VAR_ROOT, 'media')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'mediaroot')
 MEDIA_URL = '/media/'
 ROOT_URLCONF = 'parkkihubi.urls'
-STATIC_ROOT = os.path.join(VAR_ROOT, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticroot')
 STATIC_URL = '/static/'
 
 ############
