@@ -8,6 +8,7 @@ from rest_framework.status import (
 
 from parkings.factories.permit import create_permit, create_permits
 from parkings.models import PermitLookupItem
+from parkings.tests.api.enforcement.test_operator import iso8601_us
 from parkings.tests.api.enforcement.test_valid_parking import iso8601
 
 from ..utils import (
@@ -108,8 +109,8 @@ def check_permit_item_data_matches_permitlookuptem_object(permit_item_data, perm
     assert permit_item_data['permit_id'] == permit_item.permit.id
     assert permit_item_data['area'] == permit_item.area.identifier
     assert permit_item_data['registration_number'] == permit_item.registration_number
-    assert permit_item_data['start_time'] == iso8601(permit_item.start_time)
-    assert permit_item_data['end_time'] == iso8601(permit_item.end_time)
+    assert permit_item_data['start_time'] == iso8601_us(permit_item.start_time)
+    assert permit_item_data['end_time'] == iso8601_us(permit_item.end_time)
     assert permit_item_data['operator'] == str(permit_item.permit.series.owner.operator.id)
     assert permit_item_data['operator_name'] == permit_item.permit.series.owner.operator.name
 
