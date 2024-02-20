@@ -28,6 +28,7 @@ class ValidPermitItemSerializer(serializers.ModelSerializer):
             'properties',
         ]
 
+
 class ValidPermitItemFilter(django_filters.rest_framework.FilterSet):
     reg_num = django_filters.CharFilter(
         label=_("Registration number"), method='filter_reg_num')
