@@ -1,20 +1,20 @@
 #!/bin/bash
-# Run pytest locally or on docker-compose app service
+# Run pytest locally or on docker-compose runserver service
 #
-# When using docker-compose app service, the options passed by VSCodium
+# When using docker-compose runserver service, the options passed by VSCodium
 # will be handled specially to make its pytest integration smoother.
 #
 # To run pytest within docker, set USE_DOCKER environment variable to 1
 # or add USE_DOCKER=1 to the .env file.
 
 set -e
-
 USE_DOCKER=${USE_DOCKER}
 if [[ -z "$USE_DOCKER" ]] && [[ -e .env ]]; then
     USE_DOCKER=$(sed -n '/^USE_DOCKER=/s/^[^=]*=//p' .env)
 fi
 
 if [[ "$USE_DOCKER" == "1" ]] || [[ "$USE_DOCKER" == "yes" ]]; then
+    cp -n local_settings.py.tpl_dev local_settings.py
     docker-compose up -d
 else
     exec pytest "$@"
@@ -23,6 +23,7 @@ fi
 
 unset xml_file
 opts=()
+
 while [[ $# -gt 0 ]]; do
     opt="$1"
     shift
@@ -46,15 +47,17 @@ if ! tty -s; then
 fi
 
 # Wait until the database is ready
-"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 app ./docker-entrypoint /bin/true
+"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
 
 set +e
-"${docker_compose_exec[@]}" app pytest "${misc_opts[@]}" "${opts[@]}"
+
+"${docker_compose_exec[@]}" runserver /home/bew/.venv/bin/pytest "${misc_opts[@]}" "${opts[@]}"
 exit_code=$?
+
 set -e
 
 if [[ -n "$xml_file" ]]; then
-    "${docker_compose_exec[@]}" app cat /tmp/pytest_junit.xml > "$xml_file"
+    "${docker_compose_exec[@]}" runserver cat /tmp/pytest_junit.xml > "$xml_file"
 fi
 
 exit $exit_code
