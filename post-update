@@ -26,8 +26,7 @@ fi
 
 # Update the backend
 pip install -r requirements-pip.txt
-pip install -r requirements-prequ.txt
-prequ sync requirements.txt
+pip install -r requirements.txt
 
 ./manage.py collectstatic --noinput
 

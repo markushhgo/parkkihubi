@@ -53,6 +53,19 @@ class ValidParkingSerializer(ValidSerializer):
         if not instance.is_disc_parking:
             representation.pop('is_disc_parking')
 
+        if instance.time_start is not None:
+            replacement_value = instance.time_start.strftime('%Y-%m-%dT%H:%M:%SZ')
+            representation['time_start'] = replacement_value or None
+
+        if instance.time_end is not None:
+            replacement_value = instance.time_end.strftime('%Y-%m-%dT%H:%M:%SZ')
+            representation['time_end'] = replacement_value or None
+
+        if instance.time_end is None:
+            replacement_value = getattr(
+                settings, 'PARKKIHUBI_NONE_END_TIME_REPLACEMENT', None)
+            representation['time_end'] = replacement_value or None
+
         return representation
 
 

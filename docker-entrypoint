@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+if [ -d "$HOME/.venv/bin" ]; then
+    . ~/.venv/bin/activate
+fi
 
 PORT=${DJANGO_PORT:-8000}
 DEBUG_PORT=${DEBUGPY_PORT:-5678}

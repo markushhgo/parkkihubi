@@ -8,53 +8,111 @@ Django-based REST API for processing parking data.
 
 ## Requirements
 
-* Python 3.x
-* PostgreSQL + PostGIS
+* Ubuntu 22.04
+* Python 3.10
+* PostgreSQL 14 + PostGIS 3.4
 
-## Development
+## Preferred usage with Visual Studio Code
 
-### Install required system packages
+Install Remote Containers support in Visual Studio Code with these instructions:
 
-#### PostgreSQL
+* https://code.visualstudio.com/docs/remote/remote-overview
+* https://code.visualstudio.com/docs/remote/containers
 
-The recommended versions for postgresql and postgis are at least 9.4 and 2.2 respectively.
+After that this should be easy, if all that magic works:
 
-    # Ubuntu 16.04
-    sudo apt-get install python3-dev libpq-dev postgresql postgis
+* Open the project folder in Visual Studio Code
+* It asks to reopen the folder in remote container
+* Accept
+* Wait a while for it to automatically build the environment for you
 
-#### GeoDjango extra packages
+You are free to change the included VSCode settings locally for yourself but it is
+expected that you produce code which pass linters defined in the preferred settings.
 
-    # Ubuntu 16.04
-    sudo apt-get install binutils libproj-dev gdal-bin
+In the debug panel you can run following with debugger enabled:
 
-### Creating a virtualenv
+* Django runserver in hot reload mode
+* Django shell
+* Django migrations
+* Generate new Django migrations for all Django apps
 
-Create a Python 3.x virtualenv either using the traditional `virtualenv` tool or using the great `virtualenvwrapper` toolset. Assuming the former, [once installed](https://virtualenvwrapper.readthedocs.io/en/latest/), simply do:
+Happy hacking :)
 
-    mkvirtualenv -p /usr/bin/python3 parkkihubi
+## Usage with docker-compose
 
-The virtualenv will automatically activate. To activate it in the future, just do:
+Development environment can also be run directtly with docker-compose. For this to
+work `local_settings.py` -file needs to be created. Easiest way to do this is to copy
+template file to proper location.
 
-    workon parkkihubi
+```
+cp -n local_settings.py.tpl_dev local_settings.py
+```
+
+After this you can start docker compose environment
+
+```
+docker-compose --compatibility up
+```
+
+To run commands inside docker environment, execute shell process in `runserver`
+container. There are at least zsh and bash shells available.
+
+```
+docker-compose exec runserver /bin/zsh
+# or with bash
+docker-compose exec runserver /bin/bash
+```
+
+Vistual environment should be active by default in both shells. After this you can
+run migrations, collecstatic and other management commands inside container in
+`~/bew` -directory.
+
+### Possible problems with environment
+
+This container uses Python venv virtual environment. Command called from host system
+needs to use python executables from venv path ie. pytest needs to be run with fill
+path.
+
+```
+docker-compose exec runserver /home/bew/.venv/bin/pytest
+```
+
+This container has default user `bew` that expects your uid and git to be 1000 on
+host system to access files in docker volumes. In Ubuntu uid and gid 1000 is default
+for first user account created on system. This may lead to file permission problems.
+
+To fix this, there is docker compose file `docker-compose-root.yml` that can be used
+instead of the default one. Because commands are run with root acces inside the
+container this may create files with root permissions on the host system.
 
 ### Python requirements
 
-Use `pip-tools` to install and maintain installed dependencies.
+Use `pip-tools` to install and maintain installed dependencies. This also needs
+build essentials and required development libraries installed.
 
-    pip install -U pip  # pip-tools needs pip==6.1 or higher (!)
+    sudo apt-get install build-essential libpq-dev
     pip install pip-tools
 
-Install requirements as follows
+Use pip-compile to update the `requirements*.txt` files.
 
-    pip-sync requirements.txt requirements-dev.txt
+    pip-compile requirements.in
+    pip-compile requirements-dev.in
 
 ### Django configuration
 
-Environment variables are used to customize configuration in `parkkihubi/settings.py`. If you wish to override any settings, you can place them in a local `.env` file which will automatically be sourced when Django imports the settings file.
+Environment variables are used to customize base configuration in
+`parkkihubi/settings.py`. If you wish to override any settings, you can place
+them in a local `.env` file which will automatically be sourced when Django imports
+the settings file. This repository also uses `local_settings.py` settings module
+for more comprehensive configuration.
 
 Create a basic file for development as follows
 
     echo 'DEBUG=True' > .env
+
+File `local_settings.py` will be copied from `local_settings.py.tpl_dev` when VSCode
+enviroment is started. If you choose not to use the preferred environment, copy this
+file by hand before starting docker-compose environment.
 
 #### Parkkihubi settings
 
@@ -62,36 +120,6 @@ Create a basic file for development as follows
 - `PARKKIHUBI_MONITORING_API_ENABLED` default `True`
 - `PARKKIHUBI_OPERATOR_API_ENABLED` default `True`
 - `PARKKIHUBI_ENFORCEMENT_API_ENABLED` default `True`
-
-### Database
-
-Create user and database
-
-    sudo -u postgres createuser -P -R -S parkkihubi  # use password `parkkihubi`
-    sudo -u postgres createdb -O parkkihubi parkkihubi
-    sudo -u postgres psql parkkihubi -c "CREATE EXTENSION postgis;"
-
-Allow user to create test database
-
-    sudo -u postgres psql -c "ALTER USER parkkihubi CREATEDB;"
-
-Tests also require that PostGIS extension is installed on the test database. This can be achieved most easily by adding PostGIS extension to the default template:
-
-    sudo -u postgres psql -d template1 -c "CREATE EXTENSION IF NOT EXISTS postgis;"
-
-Run migrations
-
-    python manage.py migrate
-
-### Updating requirements files
-
-Use Prequ to update the `requirements*.txt` files.
-
-    pip install prequ
-
-When you change requirements, set them in `requirements.in` or `requirements-dev.in`. Then run:
-
-    prequ update
 
 ### Running tests
 
@@ -123,7 +151,11 @@ To import permit areas from geojson run:
 
 ### Starting a development server
 
-    python manage.py runserver
+With VSCode environment, you can start development server from debug side-bar. You
+also need to run migrations and generate static files.
+
+    python manage.py migrate
+    python manage.py collectstatic --noinput
 
 Operator API will be available at [http://127.0.0.1:8000/operator/v1/](http://127.0.0.1:8000/operator/v1/)
 

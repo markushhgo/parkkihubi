@@ -2,7 +2,7 @@
 version: '3'
 services:
   runserver:
-    user: bew
+    user: root
     image: parkkihubi-project-django-virtualenv
     build: .
     command: /home/bew/.venv/bin/python3 manage.py runserver 0.0.0.0:8000
