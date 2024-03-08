@@ -216,7 +216,7 @@ def test_post_event_parking_without_event_area_and_location(operator_api_client,
 
 def test_patch_event_parking(operator_api_client, event_parking):
     detail_url = get_detail_url(event_parking)
-    new_time_end = event_parking.time_end + timedelta(hours=2)
+    new_time_end = (event_parking.time_end + timedelta(hours=2)).replace(microsecond=0)
     new_time_end_str = new_time_end.strftime('%Y-%m-%dT%H:%M:%SZ')
     response_data = patch(operator_api_client, detail_url, {'time_end': new_time_end_str})
 
