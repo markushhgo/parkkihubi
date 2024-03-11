@@ -41,11 +41,6 @@ class ValidSerializer(serializers.ModelSerializer):
                 settings, 'PARKKIHUBI_NONE_END_TIME_REPLACEMENT', None)
             representation['time_end'] = replacement_value or None
 
-        if instance.time_end is None:
-            replacement_value = getattr(
-                settings, 'PARKKIHUBI_NONE_END_TIME_REPLACEMENT', None)
-            representation['time_end'] = replacement_value or None
-
         return representation
 
 
