@@ -66,9 +66,7 @@ class ParkingAreaQuerySet(models.QuerySet):
         return int(spots.sq_m) if spots else 0
 
 
-class ParkingArea(TimestampedModelMixin, UUIDPrimaryKeyMixin):
-    domain = models.ForeignKey(EnforcementDomain, on_delete=models.PROTECT,
-                               related_name='parking_areas')
+class AbstractParkingArea(TimestampedModelMixin, UUIDPrimaryKeyMixin):
 
     # This is for whatever ID the external system that this parking lot was
     # imported from has assigned to this lot. There is no guarantee that it will
@@ -90,7 +88,6 @@ class ParkingArea(TimestampedModelMixin, UUIDPrimaryKeyMixin):
         verbose_name=_('geometry'),
         srid=3879,
     )
-
     # This is a rough capacity estimate of how many cars might fit into the
     # parking area.
     capacity_estimate = models.PositiveSmallIntegerField(
@@ -99,22 +96,8 @@ class ParkingArea(TimestampedModelMixin, UUIDPrimaryKeyMixin):
         blank=True,
     )
 
-    # General purpose name field. Most likely will have the street name.
-    name = models.CharField(
-        verbose_name=_("name"),
-        max_length=200,
-        blank=True,
-        default="",
-    )
-
-    objects = ParkingAreaQuerySet.as_manager()
-
     class Meta:
-        verbose_name = _('parking area')
-        verbose_name_plural = _('parking areas')
-
-    def __str__(self):
-        return 'Parking Area %s' % str(self.origin_id)
+        abstract = True
 
     def save(self, *args, **kwargs):
         if not self.domain_id:
@@ -142,5 +125,34 @@ class ParkingArea(TimestampedModelMixin, UUIDPrimaryKeyMixin):
 
         :rtype: int
         """
+
         assert self.geom.srs.units == (1.0, 'metre')
         return int(round(self.geom.area * PARKING_SPOTS_PER_SQ_M))
+
+
+class ParkingArea(AbstractParkingArea):
+    domain = models.ForeignKey(EnforcementDomain, on_delete=models.PROTECT,
+                               related_name='parking_areas')
+
+    # General purpose name field. Most likely will have the street name.
+    name = models.CharField(
+        verbose_name=_("name"),
+        max_length=200,
+        blank=True,
+        default="",
+    )
+    objects = ParkingAreaQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = _('parking area')
+        verbose_name_plural = _('parking areas')
+
+    def __str__(self):
+        return 'Parking Area %s' % str(self.origin_id)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        from parkings.models.event_area import EventArea
+        for event_area in EventArea.objects.all():
+            if self.geom.intersects(event_area.geom):
+                event_area.parking_areas.add(self)

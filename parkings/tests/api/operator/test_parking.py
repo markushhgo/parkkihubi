@@ -8,6 +8,7 @@ from freezegun import freeze_time
 
 from parkings.factories.parking import create_payment_zone
 from parkings.models import EnforcementDomain, Parking
+from parkings.models.constants import GK25FIN_SRID
 
 from ..utils import (
     ALL_METHODS, check_method_status_codes, check_required_fields, delete,
@@ -118,6 +119,10 @@ def test_post_parking(operator_api_client, operator, new_parking_data):
     # check the actual object
     new_parking = Parking.objects.get(id=response_parking_data['id'])
     check_parking_data_matches_parking_object(new_parking_data, new_parking)
+
+    # test location_gk25fin
+    location_gk25fin = new_parking.location.transform(GK25FIN_SRID, clone=True)
+    assert location_gk25fin.wkt == new_parking.location_gk25fin.wkt
 
     # operator should be autopopulated
     assert new_parking.operator == operator

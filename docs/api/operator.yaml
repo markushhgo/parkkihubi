@@ -24,6 +24,9 @@ tags:
   - name: Parkings
     description: >-
       Endpoints for creating and updating parkings
+  - name: EventParkings
+    description: >-
+      Endpoints for creating and updating event parkings
   - name: Permit Series
     description: >-
       Creating, listing and activating permit series
@@ -141,6 +144,72 @@ components:
         - time_start
         - domain
         - zone
+
+    EventParking:
+      type: object
+      example:
+        id: 70fb01a8-a17f-4b14-9b99-0060c748411c
+        status: valid
+        created_at: "2016-12-10T20:34:38Z"
+        modified_at: "2016-12-11T21:34:22Z"
+        location:
+          type: Point
+          coordinates: [24.938466, 60.170014]
+        registration_number: LOL-007
+        time_start: "2023-12-24T21:00:00Z"
+        time_end: "2023-12-24T22:00:00Z"
+        domain: "TKU"
+        event_area_id: "cdb91cd2-88b0-4869-9c93-4df4fad28a33"
+      properties:
+        id:
+          description: Unique identifier for the event parking
+          type: string
+          format: uuid
+          readOnly: true
+        status:
+          description: Status of the event parking
+          type: string
+          enum: [valid, not_valid]
+          readOnly: true
+        created_at:
+          description: Creation time for the event parking
+          type: string
+          format: dateTime
+          readOnly: true
+        modified_at:
+          description: Modification time for the event parking
+          type: string
+          format: dateTime
+          readOnly: true
+        location: &eventParkingLocation
+          $ref: '#/components/schemas/Location'      
+        registration_number: &eventParkingRegistrationNumber
+          description: Registration number of the event parked vehicle
+          type: string
+        time_start: &eventParkingTimeStart
+          description: Start time for the event parking
+          type: string
+          format: dateTime
+        time_end: &eventParkingTimeEnd
+          description: End time for the event parking
+          type: string
+          nullable: true
+          format: dateTime
+        domain: &eventParkingDomain
+          description: >-
+            Code of the enforcement domain that is allowed
+            to see the event parking.
+          type: string
+        event_area_id: &eventParkingEventAreaID
+          description: The ID of the event area the event parking is assigned to
+          type: string
+          format: uuid
+          readOnly: true        
+      required:
+        - registration_number
+        - time_start  
+        - event_area_id     
+
     Location:
       description: Location in GeoJSON format
       type: object
@@ -162,6 +231,7 @@ components:
           items:
             type: number
             format: float
+    
     PaymentZone:
       type: object
       example:
@@ -331,6 +401,7 @@ components:
                 type: array
                 items:
                   type: object
+
     BadRequest:  # 400
       description: Bad request, details in request body
       content:
@@ -589,6 +660,175 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+ 
+  /event_parking/:
+    post:
+      tags: ['EventParkings']
+      summary: Create a new event parking
+      operationId: createEventParking
+      security: [{ApiKey: []}]
+      requestBody:
+        required: true
+        description: >-
+          Event parking to add to the system. An active event area must be is assigned to the event parking. 
+          The event area is assigned either based on the location or the event_area_id.        
+          If event_area_id is not passed, the location must be inside an active event area.
+          The event area can be assigned by passing the id of the event area with the 'event_area_id' parameter.
+          If both location and evet_area_id is passed, the event_area_id will be used. 
+        content: &eventParkingBodyContent
+          application/json:
+            schema:
+              anyOf:
+                - title: Event parking
+                  example:
+                    location:
+                      type: Point
+                      coordinates: [24.938466, 60.170014]
+                    registration_number: LOL-007
+                    time_start: "2023-12-24T21:00:00Z"
+                    time_end: "2023-12-24T22:00:00Z"
+                    domain: "TKU"
+                    event_area_id: f27f4cde-f979-470c-9f4e-78e4a8eb0eb4
+                  type: object
+                  properties:
+                    location:
+                      << : *eventParkingLocation                 
+                    registration_number:
+                      << : *eventParkingRegistrationNumber
+                    time_start:
+                      << : *eventParkingTimeStart
+                    time_end:
+                      << : *eventParkingTimeEnd
+                    domain:
+                      << : *eventParkingDomain                  
+                  required:
+                    - registration_number
+                    - time_start   
+                  oneOf:
+                    - required:
+                      - location
+                    - required:
+                      - event_area_id 
+      responses:
+        '201':
+          description: The event parking was created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventParking'
+        '400':       
+          $ref: '#/components/responses/BadRequest'         
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /event_parking/{event_parking_id}/:
+    put:
+      tags: ['EventParkings']
+      summary: Replace a event parking by its ID
+      operationId: replaceEventParkingById
+      security: [{ApiKey: []}]
+      parameters:
+        - name: event_arking_id
+          in: path
+          required: true
+          description: ID of the event parking to replace
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        description: Event parking data to put over the previous data
+        content:
+          << : *eventParkingBodyContent
+      responses:
+        '200':
+          description: The event parking was updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventParking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: ['EventParkings']
+      summary: Partial update a event parking by its ID
+      operationId: updateEventParkingById
+      security: [{ApiKey: []}]
+      parameters:
+        - name: event_parking_id
+          in: path
+          required: true
+          description: ID of the event parking to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        description: Event parking data to update
+        content:
+          application/json:
+            schema:
+              type: object
+              example:
+                time_end: "2016-12-25T22:00:00Z"
+              properties:
+                location:
+                  << : *eventParkingLocation               
+                registration_number:
+                  << : *eventParkingRegistrationNumber
+                time_start:
+                  << : *eventParkingTimeStart
+                time_end:
+                  << : *eventParkingTimeEnd
+                domain:
+                  << : *eventParkingDomain
+                event_area_id:
+                  << : *eventParkingEventAreaID 
+      responses:
+        '200':
+          description: The event parking was updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventParking'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: ['EventParkings']
+      summary: Delete a event parking by its ID
+      operationId: deleteEventParkingById
+      security: [{ApiKey: []}]
+      parameters:
+        - name: event_parking_id
+          in: path
+          required: true
+          description: ID of the event parking to delete
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: The event parking was deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+ 
+ 
+ 
   /payment_zone/:
     get:
       tags: ['Payment Zones']

@@ -14,7 +14,7 @@ servers:
 tags:
   - name: Parking Validation
     description: >-
-      Endpoints for validating parkings
+      Endpoints for validating parkings and event parkings
   - name: Operators
     description: >-
       Information about parking operators
@@ -97,6 +97,54 @@ components:
         operator_name:
           description: Name of the operator
           type: string
+    EventParking:
+      type: object
+      example: &eventParkingExample
+        id: "ee9feaaa-ebb8-41fc-a6c3-362a3aadb731"
+        created_at: "2020-04-15T11:10:05Z"
+        modified_at: "2020-04-15T13:29:46Z"
+        registration_number: "ABC-123"
+        time_start: "2020-04-15T11:10:05Z"
+        time_end: "2020-04-15T14:00:00Z"
+        operator: "63f8374e-1eed-44fa-9224-4cd0c64ddf35"
+        operator_name: "Foobar Eent Parkings"
+        event_area: "cdb91cd2-88b0-4869-9c93-4df4fad28a33"
+      properties:
+        id:
+          description: Unique identifier for the event parking object
+          type: string
+          format: uuid
+        created_at:
+          description: Creation time of the event parking
+          type: string
+          format: date-time
+        modified_at:
+          description: Modification time of the event parking
+          type: string
+          format: date-time
+        registration_number:
+          description: Registration number of vehicle for the event parking
+          type: string
+        time_start:
+          description: Start time of the event parking
+          type: string
+          format: date-time
+        time_end:
+          description: End time of the event parking
+          type: string
+          nullable: true
+          format: date-time
+        operator:
+          description: Id of the operator
+          type: string
+          format: uuid
+        operator_name:
+          description: Name of the operator
+          type: string
+        event_area:
+          description: The UUID of the event area, where the event parking is located
+          type: string
+          format: uuid
     Operator:
       type: object
       properties:
@@ -304,7 +352,7 @@ paths:
   /check_parking/:
     post:
       tags: ['Parking Validation']
-      summary: Check validity of a parking
+      summary: Check validity of a parking or a event parking
       operationId: checkParking
       security: [{ApiKey: []}]
       requestBody:
@@ -351,8 +399,8 @@ paths:
                 properties:
                   allowed:
                     description: >-
-                      Allowance status of the parking.  True if there
-                      exists a parking or permit in the system which is
+                      Allowance status of the parking or event parking.  
+                      True if there exists a parking or permit in the system which is
                       valid for the specified registration number at the
                       specified location (and time), false otherwise.
                     type: boolean
@@ -466,6 +514,62 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Parking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /valid_event_parking/:
+    get:
+      tags: ['Parking Validation']
+      summary: Get list of valid event parkings
+      description: >-
+        Get list of valid event parkings by either registration number, time
+        or both
+      operationId: getEventParkingList
+      security: [{ApiKey: []}]
+      parameters:
+        - name: reg_num
+          in: query
+          description: >-
+            Registration number of event parkings. Dashes are ignored.
+            Required if no time is set.
+          schema:
+            type: string
+        - name: time
+          in: query
+          description: >-
+            Time when event parking should be valid.  If not given, default
+            is current time. Required if no registration number is set.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: An array of event parkings with metadata information
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  count: 1
+                  next: null
+                  previous: null
+                  results:
+                    - << : *eventParkingExample
+                properties: &eventParkingPaginatedResult
+                  count:
+                    description: Total number of objects
+                    type: integer
+                  next:
+                    description: Link to the next result page
+                    type: string
+                    format: uri
+                  previous:
+                    description: Link to the previous result page
+                    type: string
+                    format: uri
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventParking'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /valid_permit_item/:

@@ -25,12 +25,12 @@ def disc_parking_data():
 
 
 expected_keys = {
-        'id', 'zone', 'registration_number',
-        'terminal_number',
-        'time_start', 'time_end',
-        'location', 'created_at', 'modified_at',
-        'status', 'is_disc_parking', 'domain',
-    }
+    'id', 'zone', 'registration_number',
+    'terminal_number',
+    'time_start', 'time_end',
+    'location', 'created_at', 'modified_at',
+    'status', 'is_disc_parking', 'domain',
+}
 
 
 def test_post_disc_parking(operator_api_client, operator, disc_parking_data):

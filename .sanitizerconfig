@@ -81,6 +81,7 @@ strategy:
     time_end: null
     time_start: null
     zone_id: null
+    location_gk25fin: null
   parkings_enforcementdomain:
     code: null
     created_at: null
@@ -125,6 +126,7 @@ strategy:
     time_end: null
     time_start: null
     zone_id: null
+    location_gk25fin: null
   parkings_parkingarea:
     capacity_estimate: null
     created_at: null
@@ -134,17 +136,58 @@ strategy:
     modified_at: null
     name: null
     origin_id: null
+  parkings_eventparking:
+    created_at: null
+    domain_id: null
+    id: null
+    location: null
+    modified_at: null
+    normalized_reg_num: parkkihubi.registration_number
+    operator_id: null
+    event_area_id: null
+    registration_number: parkkihubi.registration_number    
+    time_end: null
+    time_start: null
+    location_gk25fin: null
+  parkings_eventarea:
+    capacity_estimate: null
+    created_at: null
+    domain_id: null
+    geom: null
+    id: null
+    modified_at: null
+    name: null
+    origin_id: null
+    time_start: null
+    time_end: null
+    parking_area_id: null
+    price: null
+    price_unit_length: null
+    bus_stop_numbers: null
+    time_period_time_start: null
+    time_period_time_end: null
+    time_period_days_of_week: null
+    description: null
+  parkings_eventareastatistics:
+    id: null
+    created_at: null
+    modified_at: null
+    event_area_id: null
+    total_parking_charges: null
+    total_parking_income: null
+    total_parking_count: null    
   parkings_parkingcheck:
     allowed: null
     created_at: null
     found_parking_id: null
+    found_event_parking_id: null
     id: null
     location: null
     performer_id: null
     registration_number: parkkihubi.registration_number
     result: null
     time: null
-    time_overridden: null
+    time_overridden: null    
   parkings_parkingterminal:
     created_at: null
     domain_id: null
@@ -216,6 +259,10 @@ strategy:
     id: null
     modified_at: null
     name: null
+  parkings_eventarea_parking_areas:
+    id: null
+    eventarea_id: null
+    parkingarea_id: null
   spatial_ref_sys:
     auth_name: null
     auth_srid: null

@@ -1,12 +1,14 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.gis.admin import OSMGeoAdmin
 from django.db import models
 
 from .admin_utils import ReadOnlyAdmin, WithAreaField
 from .models import (
-    ArchivedParking, EnforcementDomain, Enforcer, Monitor, Operator, Parking,
-    ParkingArea, ParkingCheck, ParkingTerminal, PaymentZone, Permit,
-    PermitArea, PermitLookupItem, PermitSeries, Region)
+    ArchivedParking, EnforcementDomain, Enforcer, EventArea,
+    EventAreaStatistics, EventParking, Monitor, Operator, Parking, ParkingArea,
+    ParkingCheck, ParkingTerminal, PaymentZone, Permit, PermitArea,
+    PermitLookupItem, PermitSeries, Region)
 
 
 @admin.register(Enforcer)
@@ -49,6 +51,7 @@ class ParkingAdmin(OSMGeoAdmin):
     list_filter = ['operator', 'domain', 'zone']
     ordering = ('-time_start',)
     search_fields = ['registration_number']
+    exclude = ['location_gk25fin']
 
 
 @admin.register(Region)
@@ -66,11 +69,90 @@ class ParkingAreaAdmin(WithAreaField, OSMGeoAdmin):
     ordering = ('origin_id',)
 
 
+class EventAreaForm(forms.ModelForm):
+    class Meta:
+        model = EventArea
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance:
+            self.initial['time_period_days_of_week'] = tuple(self.instance.time_period_days_of_week)
+        self.fields['time_period_days_of_week'].widget = forms.CheckboxSelectMultiple(
+            choices=EventArea.ISO_DAYS_OF_WEEK_CHOICES)
+
+
+@admin.register(EventArea)
+class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
+    form = EventAreaForm
+    area_scale = 1
+    list_display = ['id', 'is_active', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
+                    'time_period_time_end', 'days_of_week', 'price', 'price_unit_length',
+                    'capacity_estimate', 'estimated_capacity', 'area', 'overlapping_parking_areas']
+    list_filter = ['domain']
+    ordering = ('origin_id',)
+    exclude = ('parking_areas',)
+
+    def days_of_week(self, obj):
+        return '\n'.join(EventArea.ISO_DAYS_OF_WEEK_CHOICES[d - 1][1] for d in obj.time_period_days_of_week)
+
+    def overlapping_parking_areas(self, obj):
+        return '\n'.join(p.origin_id for p in obj.parking_areas.all() if p is not None)
+
+    def save_related(self, request, form, formsets, change):
+        super(EventAreaAdmin, self).save_related(request, form, formsets, change)
+        for parking_area in ParkingArea.objects.all():
+            if form.instance.geom.intersects(parking_area.geom):
+                form.instance.parking_areas.add(parking_area)
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(EventParking)
+class EventParkingAdmin(OSMGeoAdmin):
+    date_hierarchy = 'time_start'
+    list_display = [
+        'id', 'operator', 'domain', 'event_area',
+        'time_start', 'time_end', 'registration_number',
+        'created_at', 'modified_at']
+    list_filter = ['operator', 'domain', 'event_area']
+    ordering = ('-time_start',)
+    search_fields = ['registration_number']
+    exclude = ['location_gk25fin']
+
+
+@admin.register(EventAreaStatistics)
+class EventAreaStatisticsAdmin(admin.ModelAdmin):
+    list_display = ['id', 'event_area_origin_id', 'total_parking_count',
+                    'price', 'total_parking_charges', 'total_parking_income']
+    ordering = ('-created_at',)
+
+    def price(self, obj):
+        return obj.event_area.price,
+
+    def event_area_origin_id(self, obj):
+        if getattr(obj, 'event_area', False):
+            return obj.event_area.origin_id
+        return None
+
+    def get_readonly_fields(self, request, obj=None):
+        return [f.name for f in self.model._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(ParkingCheck)
 class ParkingCheckAdmin(ReadOnlyAdmin, OSMGeoAdmin):
     list_display = [
         'id', 'time', 'registration_number', 'location',
-        'allowed', 'result', 'performer', 'created_at']
+        'allowed', 'result', 'performer', 'created_at',
+        'found_parking', 'found_event_parking'
+    ]
 
     modifiable = False
 

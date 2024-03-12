@@ -2,6 +2,10 @@ from rest_framework import permissions
 from rest_framework.routers import APIRootView, DefaultRouter
 
 from ..url_utils import versioned_url
+from .event_area import PublicAPIEventAreaViewSet
+from .event_area_statistics import PublicAPIEventAreaStatisticsViewSet
+from .event_area_total_statistics import (
+    PublicAPIEventAreaTotalStatisticsViewSet)
 from .parking_area import PublicAPIParkingAreaViewSet
 from .parking_area_statistics import PublicAPIParkingAreaStatisticsViewSet
 
@@ -15,6 +19,15 @@ class Router(DefaultRouter):
 
 
 router = Router()
+router.register(
+    r'event_area',
+    PublicAPIEventAreaViewSet, basename='eventarea')
+router.register(
+    r'event_area_statistics',
+    PublicAPIEventAreaStatisticsViewSet, basename='eventareastatistics')
+router.register(
+    r'event_area_total_statistics',
+    PublicAPIEventAreaTotalStatisticsViewSet, basename='eventareatotalstatistics')
 router.register(
     r'parking_area',
     PublicAPIParkingAreaViewSet, basename='parkingarea')

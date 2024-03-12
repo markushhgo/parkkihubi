@@ -15,14 +15,7 @@ from .operator import OperatorFactory
 from .parking_area import ParkingAreaFactory
 from .region import RegionFactory
 from .terminal import TerminalFactory
-
-CAPITAL_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZÅÄÖ'
-
-
-def generate_registration_number():
-    letters = ''.join(fake.random.choice(CAPITAL_LETTERS) for _ in range(3))
-    numbers = ''.join(fake.random.choice('0123456789') for _ in range(3))
-    return '%s-%s' % (letters, numbers)
+from .utils import generate_registration_number, get_time_far_enough_in_past
 
 
 def create_payment_zone(**kwargs):
@@ -80,15 +73,11 @@ class DiscParkingFactory(ParkingFactory):
     zone = None
 
 
-def get_time_far_enough_in_past():
-    return fake.date_time_this_decade(before_now=True, tzinfo=pytz.utc) - timedelta(days=7, seconds=1)
-
-
 class HistoryParkingFactory(ParkingFactory):
     time_end = factory.LazyFunction(get_time_far_enough_in_past)
     time_start = factory.lazy_attribute(
         lambda o:
-        o.time_end - timedelta(seconds=fake.random.randint(0, 60*24*14))
+        o.time_end - timedelta(seconds=fake.random.randint(0, 60 * 24 * 14))
         if o.time_end is not None
         else get_time_far_enough_in_past()
     )

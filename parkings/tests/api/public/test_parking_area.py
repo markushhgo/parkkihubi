@@ -37,6 +37,12 @@ def test_get_list_check_data(api_client, parking_area):
     assert properties_data['capacity_estimate'] == parking_area.capacity_estimate
 
 
+def test_overlapping_event_area(parking_area, event_area_factory):
+    assert parking_area.overlapping_event_areas.count() == 0
+    event_area = event_area_factory()
+    assert parking_area.overlapping_event_areas.first() == event_area
+
+
 def test_get_detail_check_data(api_client, parking_area):
     feature_data = get(api_client, get_detail_url(parking_area))
     assert feature_data.keys() == {'id', 'type', 'geometry', 'properties'}

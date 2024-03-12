@@ -1,10 +1,10 @@
 from django.contrib.gis.db import models
-from django.contrib.gis.db.models.functions import Distance
 from django.db import connections, router, transaction
 from django.utils import timezone
 from django.utils.timezone import localtime, now
 from django.utils.translation import gettext_lazy as _
 
+from parkings.models.constants import GK25FIN_SRID
 from parkings.models.mixins import TimestampedModelMixin, UUIDPrimaryKeyMixin
 from parkings.models.operator import Operator
 from parkings.models.parking_area import ParkingArea
@@ -17,6 +17,7 @@ from .enforcement_domain import EnforcementDomain
 from .mixins import AnonymizableRegNumQuerySet
 from .parking_terminal import ParkingTerminal
 from .region import Region
+from .utils import get_closest_area, normalize_reg_num
 
 Q = models.Q
 
@@ -78,32 +79,20 @@ class ParkingQuerySet(AnonymizableRegNumQuerySet, models.QuerySet):
         :type registration_number: str
         :rtype: ParkingQuerySet
         """
-        normalized_reg_num = Parking.normalize_reg_num(registration_number)
+        normalized_reg_num = normalize_reg_num(registration_number)
         return self.filter(normalized_reg_num=normalized_reg_num)
 
 
 class AbstractParking(TimestampedModelMixin, UUIDPrimaryKeyMixin):
+
     VALID = 'valid'
     NOT_VALID = 'not_valid'
 
-    region = models.ForeignKey(
-        Region, null=True, blank=True, on_delete=models.SET_NULL,
-        verbose_name=_("region"),
-    )
-    parking_area = models.ForeignKey(
-        ParkingArea, on_delete=models.SET_NULL, verbose_name=_("parking area"), null=True,
-        blank=True,
-    )
-    terminal_number = models.CharField(
-        max_length=50,  blank=True,
-        verbose_name=_("terminal number"),
-    )
-    terminal = models.ForeignKey(
-        ParkingTerminal, null=True, blank=True,
-        on_delete=models.SET_NULL,
-        verbose_name=_("terminal"),
-    )
     location = models.PointField(verbose_name=_("location"), null=True, blank=True)
+    # Store location also in GK25, as area geometries are in GK25. This avoids performance intensive
+    # SRS transformations when calculating area statistics.
+    location_gk25fin = models.PointField(srid=3879, verbose_name=_(
+        "location_gk25fin"), db_index=True, null=True, blank=True)
     operator = models.ForeignKey(
         Operator, on_delete=models.PROTECT, verbose_name=_("operator")
     )
@@ -121,15 +110,20 @@ class AbstractParking(TimestampedModelMixin, UUIDPrimaryKeyMixin):
     domain = models.ForeignKey(
         EnforcementDomain, on_delete=models.PROTECT,
         null=True,)
-    zone = models.ForeignKey(
-        PaymentZone, on_delete=models.PROTECT,
-        verbose_name=_("PaymentZone"), null=True, blank=True)
-    is_disc_parking = models.BooleanField(verbose_name=_("disc parking"), default=False)
-
-    objects = ParkingQuerySet.as_manager()
 
     class Meta:
         abstract = True
+
+    def get_state(self):
+        current_timestamp = now()
+
+        if self.time_start > current_timestamp:
+            return self.NOT_VALID
+
+        if self.time_end and self.time_end < current_timestamp:
+            return self.NOT_VALID
+
+        return self.VALID
 
     def __str__(self):
         start = localtime(self.time_start).replace(tzinfo=None)
@@ -144,8 +138,46 @@ class AbstractParking(TimestampedModelMixin, UUIDPrimaryKeyMixin):
 
         return "%s -> %s (%s)" % (start, end, self.registration_number)
 
+    def save(self, update_fields=None, *args, **kwargs):
+        if update_fields is None or 'normalized_reg_num' in update_fields:
+            self.normalized_reg_num = normalize_reg_num(self.registration_number)
+        if (update_fields is None or 'location' in update_fields) and self.location:
+            self.location_gk25fin = self.location.transform(GK25FIN_SRID, clone=True)
 
-class Parking(AbstractParking):
+        super().save(update_fields=update_fields, *args, **kwargs)
+
+
+class AbstractArchivedParking(AbstractParking):
+
+    region = models.ForeignKey(
+        Region, null=True, blank=True, on_delete=models.SET_NULL,
+        verbose_name=_("region"),
+    )
+    parking_area = models.ForeignKey(
+        ParkingArea, on_delete=models.SET_NULL, verbose_name=_("parking area"), null=True,
+        blank=True,
+    )
+    terminal_number = models.CharField(
+        max_length=50, blank=True,
+        verbose_name=_("terminal number"),
+    )
+    terminal = models.ForeignKey(
+        ParkingTerminal, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name=_("terminal"),
+    )
+    zone = models.ForeignKey(
+        PaymentZone, on_delete=models.PROTECT,
+        verbose_name=_("PaymentZone"), null=True, blank=True)
+    is_disc_parking = models.BooleanField(verbose_name=_("disc parking"), default=False)
+    objects = ParkingQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+
+
+class Parking(AbstractArchivedParking):
+
     class Meta:
         verbose_name = _("parking")
         verbose_name_plural = _("parkings")
@@ -163,17 +195,6 @@ class Parking(AbstractParking):
         values = {field: getattr(self, field) for field in fields}
         return ArchivedParking(**values)
 
-    def get_state(self):
-        current_timestamp = now()
-
-        if self.time_start > current_timestamp:
-            return Parking.NOT_VALID
-
-        if self.time_end and self.time_end < current_timestamp:
-            return Parking.NOT_VALID
-
-        return Parking.VALID
-
     def get_region(self):
         if not self.location:
             return None
@@ -182,17 +203,6 @@ class Parking(AbstractParking):
         regions = Region.objects.filter(domain=self.domain)
         intersecting = regions.filter(geom__intersects=location)
         return intersecting.first()
-
-    def get_closest_area(self, max_distance=50):
-        if not self.location:
-            return None
-        area_srid = ParkingArea._meta.get_field('geom').srid
-        location = self.location.transform(area_srid, clone=True)
-        areas = ParkingArea.objects.filter(domain=self.domain)
-        with_distance = areas.annotate(distance=Distance('geom', location))
-        within_range = with_distance.filter(distance__lte=max_distance)
-        closest_area = within_range.order_by('distance').first()
-        return closest_area
 
     def save(self, update_fields=None, *args, **kwargs):
         if not self.domain_id:
@@ -209,19 +219,9 @@ class Parking(AbstractParking):
         if update_fields is None or 'region' in update_fields:
             self.region = self.get_region()
         if update_fields is None or 'parking_area' in update_fields:
-            self.parking_area = self.get_closest_area()
-
-        if update_fields is None or 'normalized_reg_num' in update_fields:
-            self.normalized_reg_num = (
-                self.normalize_reg_num(self.registration_number))
+            self.parking_area = get_closest_area(self.location, self.domain)
 
         super().save(update_fields=update_fields, *args, **kwargs)
-
-    @classmethod
-    def normalize_reg_num(cls, registration_number):
-        if not registration_number:
-            return ''
-        return registration_number.upper().replace('-', '').replace(' ', '')
 
 
 @with_model_field_modifications(
@@ -239,7 +239,7 @@ class Parking(AbstractParking):
     terminal={"db_index": False},
     zone={"db_index": False},
 )
-class ArchivedParking(AbstractParking):
+class ArchivedParking(AbstractArchivedParking):
     archived_at = models.DateTimeField(
         auto_now_add=True, db_index=True, verbose_name=_("time archived")
     )

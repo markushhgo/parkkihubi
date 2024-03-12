@@ -10,34 +10,48 @@ from .permissions import IsMonitor
 from .serializers import ParkingSerializer
 
 
-class ValidParkingFilter(django_filters.rest_framework.FilterSet):
+class ValidFilter(django_filters.rest_framework.FilterSet):
     time = django_filters.IsoDateTimeFilter(
         label=_("Time"), method='filter_time', required=True)
 
     class Meta:
-        model = Parking
+        abstract = True
         fields = [
             'time',
-            'region',
-            'zone',
         ]
 
     def filter_time(self, queryset, name, value):
         return queryset.valid_at(value)
 
 
-class ValidParkingViewSet(viewsets.ReadOnlyModelViewSet):
+class ValidParkingFilter(ValidFilter):
+
+    class Meta:
+        model = Parking
+        fields = ValidFilter.Meta.fields + [
+            'region',
+            'zone',
+        ]
+
+
+class ValidViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsMonitor]
-    queryset = (
-        Parking.objects
-        .order_by('time_start')
-        .select_related('operator'))
-    serializer_class = ParkingSerializer
     pagination_class = gis_pagination.GeoJsonPagination
-    filterset_class = ValidParkingFilter
     bbox_filter_field = 'location'
     filter_backends = [DjangoFilterBackend, WGS84InBBoxFilter]
     bbox_filter_include_overlapping = True
 
     def get_queryset(self):
         return super().get_queryset().filter(domain=self.request.user.monitor.domain)
+
+    class Meta:
+        abstract = True
+
+
+class ValidParkingViewSet(ValidViewSet):
+    queryset = (
+        Parking.objects
+        .order_by('time_start')
+        .select_related('operator'))
+    serializer_class = ParkingSerializer
+    filterset_class = ValidParkingFilter
