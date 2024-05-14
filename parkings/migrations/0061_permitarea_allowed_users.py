@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ("parkings", "0045_parkingarea_name"),
+        ("parkings", "0060_eventparking_event_area_set_null_on_delete"),
     ]
 
     operations = [

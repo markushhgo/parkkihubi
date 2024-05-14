@@ -18,7 +18,7 @@ def populate_permitted_user_from_allowed_users(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("parkings", "0046_permitarea_allowed_users"),
+        ("parkings", "0061_permitarea_allowed_users"),
     ]
 
     operations = [

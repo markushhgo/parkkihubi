@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("parkings", "0047_populate_permitarea_allowed_users"),
+        ("parkings", "0062_populate_permitarea_allowed_users"),
     ]
 
     operations = [
