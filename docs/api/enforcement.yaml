@@ -599,7 +599,7 @@ paths:
                 type: object
                 example:
                   count: 100
-                  next: "https://api.parkkiopas.fi/enforcement/v1/valid_permit_item/?page=2"
+                  next: "https://parkki.turku.fi/enforcement/v1/valid_permit_item/?page=2"
                   previous: null
                   results:
                     - << : *validPermitItemExample
