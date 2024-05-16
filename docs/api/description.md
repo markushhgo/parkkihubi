@@ -97,7 +97,7 @@ ID=abcd1234-1234-1234-1234-123456789012  # A parking ID
 curl -X POST \
   -H "Content-Type: application/json" \
   -d '{"time_end": "2023-10-20T17:00:00+0300"}' \
-  "https://testapi.parkkiopas.fi/operator/v1/parking/$ID/?method=PATCH"
+  "https://parkki.turku.fi/operator/v1/parking/$ID/?method=PATCH"
 ```
 
 For comparison here is how it would look like without the Method
@@ -107,7 +107,7 @@ Override:
 curl -X PATCH \
   -H "Content-Type: application/json" \
   -d '{"time_end": "2023-10-20T17:00:00+0300"}' \
-  "https://testapi.parkkiopas.fi/operator/v1/parking/$ID/"
+  "https://parkki.turku.fi/operator/v1/parking/$ID/"
 ```
 
 ### Limitations
