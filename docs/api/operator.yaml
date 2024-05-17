@@ -1,14 +1,12 @@
 openapi: 3.0.1
 info:
   title: Parkkihubi Operator API
-  description: >-
-    Parkkihubi Operator REST API Documentation
+  description:
+    $ref: ./description.md
   version: "1.2.0"
 servers:
-  - url: https://api.parkkiopas.fi/operator/v1/
+  - url: https://parkki.turku.fi/operator/v1/
     description: Production server
-  - url: https://testapi.parkkiopas.fi/operator/v1/
-    description: Test server
   - url: http://localhost:8000/operator/v1/
     description: Local development server
 tags:
@@ -182,7 +180,7 @@ components:
           format: dateTime
           readOnly: true
         location: &eventParkingLocation
-          $ref: '#/components/schemas/Location'      
+          $ref: '#/components/schemas/Location'
         registration_number: &eventParkingRegistrationNumber
           description: Registration number of the event parked vehicle
           type: string
@@ -204,11 +202,11 @@ components:
           description: The ID of the event area the event parking is assigned to
           type: string
           format: uuid
-          readOnly: true        
+          readOnly: true
       required:
         - registration_number
-        - time_start  
-        - event_area_id     
+        - time_start
+        - event_area_id
 
     Location:
       description: Location in GeoJSON format
@@ -231,7 +229,7 @@ components:
           items:
             type: number
             format: float
-    
+
     PaymentZone:
       type: object
       example:
@@ -660,7 +658,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
- 
+
   /event_parking/:
     post:
       tags: ['EventParkings']
@@ -670,11 +668,11 @@ paths:
       requestBody:
         required: true
         description: >-
-          Event parking to add to the system. An active event area must be is assigned to the event parking. 
-          The event area is assigned either based on the location or the event_area_id.        
+          Event parking to add to the system. An active event area must be is assigned to the event parking.
+          The event area is assigned either based on the location or the event_area_id.
           If event_area_id is not passed, the location must be inside an active event area.
           The event area can be assigned by passing the id of the event area with the 'event_area_id' parameter.
-          If both location and evet_area_id is passed, the event_area_id will be used. 
+          If both location and evet_area_id is passed, the event_area_id will be used.
         content: &eventParkingBodyContent
           application/json:
             schema:
@@ -692,7 +690,7 @@ paths:
                   type: object
                   properties:
                     location:
-                      << : *eventParkingLocation                 
+                      << : *eventParkingLocation
                     registration_number:
                       << : *eventParkingRegistrationNumber
                     time_start:
@@ -700,15 +698,15 @@ paths:
                     time_end:
                       << : *eventParkingTimeEnd
                     domain:
-                      << : *eventParkingDomain                  
+                      << : *eventParkingDomain
                   required:
                     - registration_number
-                    - time_start   
+                    - time_start
                   oneOf:
                     - required:
                       - location
                     - required:
-                      - event_area_id 
+                      - event_area_id
       responses:
         '201':
           description: The event parking was created successfully
@@ -716,8 +714,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/EventParking'
-        '400':       
-          $ref: '#/components/responses/BadRequest'         
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
   /event_parking/{event_parking_id}/:
@@ -778,7 +776,7 @@ paths:
                 time_end: "2016-12-25T22:00:00Z"
               properties:
                 location:
-                  << : *eventParkingLocation               
+                  << : *eventParkingLocation
                 registration_number:
                   << : *eventParkingRegistrationNumber
                 time_start:
@@ -788,7 +786,7 @@ paths:
                 domain:
                   << : *eventParkingDomain
                 event_area_id:
-                  << : *eventParkingEventAreaID 
+                  << : *eventParkingEventAreaID
       responses:
         '200':
           description: The event parking was updated successfully
@@ -826,9 +824,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
- 
- 
- 
+
+
+
   /payment_zone/:
     get:
       tags: ['Payment Zones']
