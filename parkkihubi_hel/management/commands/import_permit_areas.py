@@ -7,7 +7,8 @@ class Command(BaseCommand):
     help = 'Uses the PermitAreaImporter to create permit areas'
 
     def add_arguments(self, parser):
-        parser.add_argument('allowed_user', nargs='?', type=str, default=None)
+        parser.add_argument('permitted-user')
 
-    def handle(self, *args, allowed_user=None, **options):
-        PermitAreaImporter().import_permit_areas(allowed_user)
+    def handle(self, *args, **options):
+        permitted_user = options.get('permitted-user', None)
+        PermitAreaImporter().import_permit_areas(permitted_user)
