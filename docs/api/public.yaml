@@ -2,14 +2,11 @@ swagger: '2.0'
 
 info:
   title: Parkkihubi Public API
-  description: |
-    Parkkihubi public REST API Documentation
-
-    **NOTE!** The public API is on very initial state. Backward
-    incompatible changes are possible.
+  description:
+    $ref: ./description.md
   version: "1.0.0"
 
-host: pubapi.parkkiopas.fi
+host: parkkiopas.turku.fi
 schemes:
   - https
 basePath: /public/v1
@@ -85,8 +82,8 @@ paths:
                     price: "0.10"
                     price_unit_length: 1
                     bus_stop_numbers: [
-                      434, 
-                      535, 
+                      434,
+                      535,
                       324
                     ]
                     time_period_time_start: "10:00:00"
@@ -376,7 +373,7 @@ paths:
               current_parking_count: 5
         404:
           $ref: '#/responses/NotFound'
-  
+
   /event_area_total_statistics/:
     get:
       tags:
@@ -462,9 +459,9 @@ definitions:
       location:
         $ref: '#/definitions/Location'
       time_start:
-        $ref: '#/definitions/TimeStart'       
+        $ref: '#/definitions/TimeStart'
       time_end:
-        $ref: '#/definitions/TimeEnd'        
+        $ref: '#/definitions/TimeEnd'
       zone:
         description: Parking zone
         type: integer
@@ -497,7 +494,7 @@ definitions:
     description: Start time for the parking
     type: string
     format: dateTime
-    
+
   TimeEnd:
         description: End time for the parking
         type: string
@@ -577,14 +574,14 @@ definitions:
       properties:
         capacity_estimate: 2
       time_start:
-        $ref: '#/definitions/TimeStart'       
+        $ref: '#/definitions/TimeStart'
       time_end:
         $ref: '#/definitions/TimeEnd'
       price: "0.10"
       price_unit_length: 1
       bus_stop_numbers: [
-        434, 
-        535, 
+        434,
+        535,
         324
       ]
       time_period_time_start: "10:00:00"
@@ -595,8 +592,8 @@ definitions:
         3,
         4,
         5
-      ]  
-      
+      ]
+
 
   ParkingAreaStatistics:
     description: |
@@ -621,7 +618,7 @@ definitions:
 
   EventAreaStatistics:
     description: |
-      Statistics of a single event area. 
+      Statistics of a single event area.
     type: object
     example:
       id: f27f4cde-f979-470c-9f4e-78e4a8eb0eb4
@@ -642,7 +639,7 @@ definitions:
 
   EventAreaTotalStatistics:
     description: |
-      Total statistics of a single event area. 
+      Total statistics of a single event area.
     type: object
     example:
       id: f27f4cde-f979-470c-9f4e-78e4a8eb0eb4
@@ -655,7 +652,7 @@ definitions:
         description: |
           Total number of event parkings on the area, if it is greater
           than 3.
-          
+
           **NOTE!** The value is always returned as 0 if the number of
            parkings is 3 or less.
 
