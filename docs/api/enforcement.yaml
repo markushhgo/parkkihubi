@@ -1,14 +1,12 @@
 openapi: 3.0.1
 info:
   title: Parkkihubi Enforcement API
-  description: >-
-    Parkkihubi Enforcement REST API Documentation
+  description:
+    $ref: ./description.md
   version: "1.2.0"
 servers:
-  - url: https://api.parkkiopas.fi/enforcement/v1/
+  - url: https://parkki.turku.fi/enforcement/v1/
     description: Production server
-  - url: https://testapi.parkkiopas.fi/enforcement/v1/
-    description: Test server
   - url: http://localhost:8000/enforcement/v1/
     description: Local development server
 tags:
@@ -399,7 +397,7 @@ paths:
                 properties:
                   allowed:
                     description: >-
-                      Allowance status of the parking or event parking.  
+                      Allowance status of the parking or event parking.
                       True if there exists a parking or permit in the system which is
                       valid for the specified registration number at the
                       specified location (and time), false otherwise.
@@ -601,7 +599,7 @@ paths:
                 type: object
                 example:
                   count: 100
-                  next: "https://api.parkkiopas.fi/enforcement/v1/valid_permit_item/?page=2"
+                  next: "https://parkki.turku.fi/enforcement/v1/valid_permit_item/?page=2"
                   previous: null
                   results:
                     - << : *validPermitItemExample
