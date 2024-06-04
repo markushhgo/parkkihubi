@@ -202,7 +202,6 @@ components:
           description: The ID of the event area the event parking is assigned to
           type: string
           format: uuid
-          readOnly: true
       required:
         - registration_number
         - time_start
@@ -699,14 +698,14 @@ paths:
                       << : *eventParkingTimeEnd
                     domain:
                       << : *eventParkingDomain
+                    event_area_id:
+                      << : *eventParkingEventAreaID
                   required:
                     - registration_number
                     - time_start
                   oneOf:
-                    - required:
-                      - location
-                    - required:
-                      - event_area_id
+                    - required: [event_area_id]
+                    - required: [location]
       responses:
         '201':
           description: The event parking was created successfully
