@@ -106,7 +106,10 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
                 form.instance.parking_areas.add(parking_area)
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        if obj is None:  #
+            return super().has_delete_permission(request, obj)
+        # Allow deletion only if is_test_event_area is True
+        return obj.is_test_event_area
 
 
 @admin.register(EventParking)
