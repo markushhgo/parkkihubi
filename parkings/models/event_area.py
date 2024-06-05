@@ -68,7 +68,7 @@ class EventArea(AbstractParkingArea):
                                           null=True, blank=True, default=list)
 
     description = models.TextField(null=True, blank=True, verbose_name=_('description'))
-    is_test_event_area = models.BooleanField(default=False, verbose_name=_('is test event area'), help_text=_(
+    is_test = models.BooleanField(default=False, verbose_name=_('is test event area'), help_text=_(
         'if set to True the event area is ment only for testing purposes, can be deleted and'
         ' is ignored in event_area statistics '))
     objects = EventAreaQuerySet.as_manager()
