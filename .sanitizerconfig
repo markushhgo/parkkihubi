@@ -145,7 +145,7 @@ strategy:
     normalized_reg_num: parkkihubi.registration_number
     operator_id: null
     event_area_id: null
-    registration_number: parkkihubi.registration_number    
+    registration_number: parkkihubi.registration_number
     time_end: null
     time_start: null
     location_gk25fin: null
@@ -168,6 +168,7 @@ strategy:
     time_period_time_end: null
     time_period_days_of_week: null
     description: null
+    is_test: null
   parkings_eventareastatistics:
     id: null
     created_at: null
@@ -175,7 +176,7 @@ strategy:
     event_area_id: null
     total_parking_charges: null
     total_parking_income: null
-    total_parking_count: null    
+    total_parking_count: null
   parkings_parkingcheck:
     allowed: null
     created_at: null
@@ -187,7 +188,7 @@ strategy:
     registration_number: parkkihubi.registration_number
     result: null
     time: null
-    time_overridden: null    
+    time_overridden: null
   parkings_parkingterminal:
     created_at: null
     domain_id: null
