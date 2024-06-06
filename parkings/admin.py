@@ -108,7 +108,7 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     def has_delete_permission(self, request, obj=None):
         if obj is None:  #
             return super().has_delete_permission(request, obj)
-        # Allow deletion only if is_test_event_area is True
+        # Allow deletion only if is_test is True
         return obj.is_test
 
 
