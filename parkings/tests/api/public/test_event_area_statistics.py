@@ -150,6 +150,16 @@ def test_get_list_check_data(api_client, event_parking_factory, event_area_facto
     assert stats_data_3['current_parking_count'] == 0  # not valid parkings currently
 
 
+def test_get_list_test_event_area(api_client, event_area_factory):
+    event_area = event_area_factory.create()
+    stats_data = get(api_client, list_url)
+    assert stats_data["count"] == 1
+    event_area.is_test = True
+    event_area.save()
+    stats_data = get(api_client, list_url)
+    assert stats_data["count"] == 0
+
+
 def test_get_detail_check_data(api_client, event_parking_factory, event_area):
     event_parking_factory.create_batch(3, event_area=event_area)
     stats_data = get(api_client, get_detail_url(event_area))
