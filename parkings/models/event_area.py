@@ -26,7 +26,7 @@ class EventAreaQuerySet(ParkingAreaQuerySet):
             Q(time_period_time_end__gte=now) & Q(time_period_time_start__lte=now) & Q(
                 time_period_days_of_week__contains=[iso_weekday])
         )
-        return qs.order_by('origin_id')
+        return qs.filter(is_test=False).order_by('origin_id')
 
 
 class EventArea(AbstractParkingArea):

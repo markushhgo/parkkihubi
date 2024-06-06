@@ -25,4 +25,4 @@ class PublicAPIEventAreaTotalStatisticsViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
     serializer_class = EventAreaTotalStatisticsSerializer
     pagination_class = Pagination
-    queryset = EventAreaStatistics.objects.all().order_by('-created_at')
+    queryset = EventAreaStatistics.objects.filter(event_area__is_test=False).order_by('-created_at')
