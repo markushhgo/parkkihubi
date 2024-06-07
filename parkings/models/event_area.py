@@ -26,7 +26,7 @@ class EventAreaQuerySet(ParkingAreaQuerySet):
             Q(time_period_time_end__gte=now) & Q(time_period_time_start__lte=now) & Q(
                 time_period_days_of_week__contains=[iso_weekday])
         )
-        return qs.order_by('origin_id')
+        return qs.filter(is_test=False).order_by('origin_id')
 
 
 class EventArea(AbstractParkingArea):
@@ -68,7 +68,9 @@ class EventArea(AbstractParkingArea):
                                           null=True, blank=True, default=list)
 
     description = models.TextField(null=True, blank=True, verbose_name=_('description'))
-
+    is_test = models.BooleanField(default=False, verbose_name=_('is test'), help_text=_(
+        'if set to True the event area is ment only for testing purposes, can be deleted and'
+        ' is not visible in the public API.'))
     objects = EventAreaQuerySet.as_manager()
 
     @property
