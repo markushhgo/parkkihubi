@@ -86,8 +86,8 @@ class EventAreaForm(forms.ModelForm):
 class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
     form = EventAreaForm
     area_scale = 1
-    list_display = ['id', 'is_active', 'origin_id', 'domain', 'time_start', 'time_end', 'time_period_time_start',
-                    'time_period_time_end', 'days_of_week', 'price', 'price_unit_length',
+    list_display = ['id', 'is_active', 'is_test', 'origin_id', 'domain', 'time_start', 'time_end',
+                    'time_period_time_start', 'time_period_time_end', 'days_of_week', 'price', 'price_unit_length',
                     'capacity_estimate', 'estimated_capacity', 'area', 'overlapping_parking_areas']
     list_filter = ['domain']
     ordering = ('origin_id',)
@@ -106,7 +106,10 @@ class EventAreaAdmin(WithAreaField, OSMGeoAdmin):
                 form.instance.parking_areas.add(parking_area)
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        if obj is None:  #
+            return super().has_delete_permission(request, obj)
+        # Allow deletion only if is_test is True
+        return obj.is_test
 
 
 @admin.register(EventParking)

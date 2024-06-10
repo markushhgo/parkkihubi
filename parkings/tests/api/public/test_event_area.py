@@ -46,6 +46,16 @@ def test_get_list_check_data(api_client, event_area):
     assert properties_data['capacity_estimate'] == event_area.capacity_estimate
 
 
+def test_get_list_test_event_area(api_client, event_area_factory):
+    event_area = event_area_factory.create()
+    stats_data = get(api_client, list_url)
+    assert stats_data["count"] == 1
+    event_area.is_test = True
+    event_area.save()
+    stats_data = get(api_client, list_url)
+    assert stats_data["count"] == 0
+
+
 def test_event_area_with_price_and_price_unit_lenght(api_client, event_area):
     event_area.price = Decimal(str('1.23'))
     event_area.price_unit_length = 8

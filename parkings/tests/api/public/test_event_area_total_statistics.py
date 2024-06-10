@@ -38,6 +38,16 @@ def test_get_list_check_data(api_client, event_parking_factory, event_area_facto
     assert results[4]['total_parking_count'] == 0
 
 
+def test_get_list_test_event_area(api_client, event_area_factory):
+    event_area = event_area_factory.create()
+    stats_data = get(api_client, list_url)
+    assert stats_data["count"] == 1
+    event_area.is_test = True
+    event_area.save()
+    stats_data = get(api_client, list_url)
+    assert stats_data["count"] == 0
+
+
 @pytest.mark.django_db
 def test_get_detail_check_data(api_client, event_parking_factory, event_area_factory):
     event_area = event_area_factory.create()

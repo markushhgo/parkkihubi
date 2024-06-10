@@ -32,6 +32,15 @@ def test_event_area_statistics_is_created(event_area_data):
 
 
 @pytest.mark.django_db
+def test_event_area_statistics_is_deleted(event_area_data):
+    event_area_data["is_test"] = True
+    event_area = EventArea.objects.create(**event_area_data)
+    assert EventAreaStatistics.objects.count() == 1
+    event_area.delete()
+    assert EventAreaStatistics.objects.count() == 0
+
+
+@pytest.mark.django_db
 def test_event_area_statistics_is_not_deleted(event_area_data):
     event_area = EventArea.objects.create(**event_area_data)
     statistics = EventAreaStatistics.objects.first()
