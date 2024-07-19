@@ -80,7 +80,7 @@ class CheckParking(generics.GenericAPIView):
             "location": {
                 "payment_zone": zone,
                 "permit_area": area.identifier if area else None,
-                "event_area": event_area.origin_id if event_area else None,
+                "event_area": event_area.id if event_area else None,
             },
             "time": time,
         }

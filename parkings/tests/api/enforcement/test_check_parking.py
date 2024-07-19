@@ -132,7 +132,7 @@ def test_check_event_parking_parked_in_wrong_event_area(
                                           domain=enforcer.enforced_domain, event_area=event_area_1, location=location)
     response = enforcer_api_client.post(list_url, data=PARKING_DATA_2)
     assert response.status_code == HTTP_200_OK
-    assert response.data["location"]["event_area"] == event_area_2.origin_id
+    assert response.data["location"]["event_area"] == event_area_2.id
     assert response.data["allowed"] is False
     assert response.data["end_time"] == event_parking.time_end
     assert ParkingCheck.objects.filter(
@@ -167,7 +167,7 @@ def test_check_event_parking_with_time_end_null(
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is True
     assert response.data["end_time"] is None
-    assert response.data["location"]["event_area"] == event_area.origin_id
+    assert response.data["location"]["event_area"] == event_area.id
     assert ParkingCheck.objects.filter(
         registration_number=PARKING_DATA["registration_number"]).first().result["allowed"] is True
 
