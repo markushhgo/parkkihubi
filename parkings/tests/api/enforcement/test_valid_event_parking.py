@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+from django.contrib.gis.geos import Point
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.timezone import utc
@@ -10,6 +11,8 @@ from rest_framework.status import (
 from ..utils import (
     ALL_METHODS, check_list_endpoint_base_fields, check_method_status_codes,
     check_response_objects, get, get_ids_from_results)
+from .test_check_parking import (
+    PARKING_DATA, PARKING_DATA_2, WGS84_SRID, create_area_geom)
 
 list_url = reverse('enforcement:v1:valid_event_parking-list')
 
@@ -76,7 +79,9 @@ def test_list_endpoint_base_fields(enforcer_api_client):
     check_list_endpoint_base_fields(event_parking_data)
 
 
-def test_list_endpoint_data(enforcer_api_client, event_parking, enforcer):
+def test_list_endpoint_data(enforcer_api_client, event_parking, enforcer, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=enforcer.enforced_domain)
+    event_parking.event_area = event_area
     event_parking.domain = enforcer.enforced_domain
     event_parking.save()
 
@@ -123,11 +128,33 @@ def iso8601_us(dt):
     return dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-def test_registration_number_filter(operator, enforcer_api_client, event_parking_factory, enforcer):
-    p1 = event_parking_factory(registration_number='ABC-123', operator=operator, domain=enforcer.enforced_domain)
-    p2 = event_parking_factory(registration_number='ZYX-987', operator=operator, domain=enforcer.enforced_domain)
-    p3 = event_parking_factory(registration_number='ZYX-987', operator=operator, domain=enforcer.enforced_domain)
-    p4 = event_parking_factory(registration_number='Zyx987 ', operator=operator, domain=enforcer.enforced_domain)
+def test_event_parkings_outside_event_area(
+        operator, enforcer_api_client, event_parking_factory, enforcer, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=enforcer.enforced_domain)
+    location = Point(PARKING_DATA_2["location"]["longitude"], PARKING_DATA_2["location"]["latitude"], srid=WGS84_SRID)
+    event_parking = event_parking_factory(registration_number='ABC-123', operator=operator,
+                                          domain=enforcer.enforced_domain, location=location, event_area=event_area)
+    results = get(enforcer_api_client, list_url_for('ABC-123'))['results']
+    assert results == []
+    # Test with location inside the event area
+    location = Point(PARKING_DATA["location"]["longitude"], PARKING_DATA["location"]["latitude"], srid=WGS84_SRID)
+    event_parking.location = location
+    event_parking.save()
+    results = get(enforcer_api_client, list_url_for('ABC-123'))['results']
+    assert len(results) == 1
+    check_event_parking_data_keys(results[0])
+
+
+def test_registration_number_filter(operator, enforcer_api_client, event_parking_factory, enforcer, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=enforcer.enforced_domain)
+    p1 = event_parking_factory(registration_number='ABC-123', operator=operator,
+                               domain=enforcer.enforced_domain, event_area=event_area)
+    p2 = event_parking_factory(registration_number='ZYX-987', operator=operator,
+                               domain=enforcer.enforced_domain, event_area=event_area)
+    p3 = event_parking_factory(registration_number='ZYX-987', operator=operator,
+                               domain=enforcer.enforced_domain, event_area=event_area)
+    p4 = event_parking_factory(registration_number='Zyx987 ', operator=operator,
+                               domain=enforcer.enforced_domain, event_area=event_area)
 
     results = get(enforcer_api_client, list_url_for('ABC-123'))['results']
     assert get_ids_from_results(results) == {p1.id}
@@ -157,20 +184,23 @@ def test_registration_number_filter(operator, enforcer_api_client, event_parking
     'more_than_day_after_2nd',
     'now',
 ])
-def test_time_filtering(operator, enforcer_api_client, event_parking_factory, name, enforcer):
+def test_time_filtering(operator, enforcer_api_client, event_parking_factory, name, enforcer, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=enforcer.enforced_domain)
     p1 = event_parking_factory(
         registration_number='ABC-123',
         time_start=datetime(2012, 1, 1, 12, 0, 0, tzinfo=utc),
         time_end=datetime(2014, 1, 1, 12, 0, 0, tzinfo=utc),
         operator=operator,
-        domain=enforcer.enforced_domain)
+        domain=enforcer.enforced_domain,
+        event_area=event_area)
     p2 = event_parking_factory(
         registration_number='ABC-123',
         time_start=datetime(2014, 1, 1, 12, 0, 0, tzinfo=utc),
         time_end=datetime(2016, 1, 1, 12, 0, 0, tzinfo=utc),
         operator=operator,
-        domain=enforcer.enforced_domain)
-    p3 = event_parking_factory(registration_number='ABC-123', domain=enforcer.enforced_domain)
+        domain=enforcer.enforced_domain,
+        event_area=event_area)
+    p3 = event_parking_factory(registration_number='ABC-123', domain=enforcer.enforced_domain, event_area=event_area)
 
     (time, expected_parkings) = {
         'before_all': ('2000-01-01T12:00:00Z', []),
@@ -194,7 +224,9 @@ def test_time_filtering(operator, enforcer_api_client, event_parking_factory, na
 
 
 @override_settings(PARKKIHUBI_NONE_END_TIME_REPLACEMENT='2030-12-31T23:59:59Z')
-def test_null_time_end_is_replaced_correctly(enforcer_api_client, event_parking, enforcer):
+def test_null_time_end_is_replaced_correctly(enforcer_api_client, event_parking, enforcer, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=enforcer.enforced_domain)
+    event_parking.event_area = event_area
     event_parking.time_end = None
     event_parking.domain = enforcer.enforced_domain
     event_parking.save()
@@ -206,9 +238,11 @@ def test_null_time_end_is_replaced_correctly(enforcer_api_client, event_parking,
 
 
 def test_enforcer_can_view_only_parkings_from_domain_they_enforce(
-        enforcer_api_client, event_parking_factory, enforcer):
-    visible_parking = event_parking_factory(registration_number='ABC-123', domain=enforcer.enforced_domain)
-    event_parking_factory(registration_number='ABC-123')  # Parking belonging to different domain
+        enforcer_api_client, event_parking_factory, enforcer, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=enforcer.enforced_domain)
+    visible_parking = event_parking_factory(registration_number='ABC-123',
+                                            domain=enforcer.enforced_domain, event_area=event_area)
+    event_parking_factory(registration_number='ABC-123', event_area=event_area)  # Parking belonging to different domain
 
     response = get(enforcer_api_client, list_url_for('ABC-123'))
 
