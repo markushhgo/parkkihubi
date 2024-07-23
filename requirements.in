@@ -30,3 +30,7 @@ django-cors-headers
 django-sanitized-dump
 python-memcached
 pytz
+
+# Azure Redis
+redis==5.0.7
+django-redis==5.4.0

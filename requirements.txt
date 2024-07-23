@@ -21,7 +21,7 @@ django==4.2.8
     #   drf-jwt-2fa
 django-cors-headers==3.5.0
     # via -r requirements.in
-django-environ==0.4.5
+django-environ==0.5.0
     # via -r requirements.in
 django-filter==2.3.0
     # via -r requirements.in
@@ -67,6 +67,8 @@ pyyaml==6.0.1
     #   django-sanitized-dump
     #   owslib
 raven==6.10.0
+redis==5.0.7
+django-redis==5.4.0
     # via -r requirements.in
 requests==2.25.1
     # via

@@ -38,10 +38,10 @@ ALLOWED_HOSTS = ['*']
 #########
 # Paths #
 #########
-MEDIA_ROOT = os.path.join(BASE_DIR, 'mediaroot')
+MEDIA_ROOT = env("MEDIA_ROOT")
 MEDIA_URL = '/media/'
 ROOT_URLCONF = 'parkkihubi.urls'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticroot')
+STATIC_ROOT = env("STATIC_ROOT")
 STATIC_URL = '/static/'
 
 ############
