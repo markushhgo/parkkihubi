@@ -2,6 +2,9 @@ $resourceGroup = "turku-stg-parkkihub"
 $registry = "turkustgparkkihubregistry"
 $image = "parkkihub"
 $webApp = "turku-stg-parkkihub-api"
+$db = "turku-stg-parkkihub-db2"
+$dbUser = "adminFW3AqR"
+$dbDatabase = "parkkihub"
 $sshPort = 59124
 
 function Test-NetConnectionFaster($Addr, [int] $Port) {
@@ -30,12 +33,34 @@ function Open-AzureWebAppSsh {
     Stop-Job $jobId
 }
 
+function Open-AzurePostgresDb {
+    $myIp = Invoke-RestMethod https://api.ipify.org
+    $firewallRuleName = "Temporary_$($myIp -replace '\.', '_')"
+    "Enabling public network access to db..."
+    az postgres flexible-server update --resource-group $resourceGroup --name $db --set network.publicNetworkAccess=Enabled >$nul
+    "Whitelisting current IP in db networking..."
+    az postgres flexible-server firewall-rule create --resource-group $resourceGroup --name $db -r $firewallRuleName --start-ip-address $myIp
+    "Connecting to db..."
+    psql -h "$db.postgres.database.azure.com" -U $dbUser -d $dbDatabase
+    "Removing current IP whitelisting from db networking..."
+    az postgres flexible-server firewall-rule delete --resource-group $resourceGroup --name $db -r $firewallRuleName -y
+    "Disabling public network access to db..."
+    az postgres flexible-server update --resource-group $resourceGroup --name $db --set network.publicNetworkAccess=Disabled >$nul
+    "Done"
+}
+
 switch ($args[0]) {
     "build" {
         az acr build --resource-group $resourceGroup --registry $registry --image $image .
     }
     "log" {
         az webapp log tail --resource-group $resourceGroup --name $webApp
+    }
+    "ssh" {
+        Open-AzureWebAppSsh
+    }
+    "db" {
+        Open-AzurePostgresDb
     }
     "config" {
         switch ($args[1]) {
@@ -50,9 +75,6 @@ switch ($args[0]) {
             }
         }
     }
-    "ssh" {
-        Open-AzureWebAppSsh
-    }
     Default {
        "Usage:"
        ""
@@ -62,6 +84,8 @@ switch ($args[0]) {
        "`tView the WebApp's log stream"
        "./AzureUtil ssh"
        "`tAccess the WebApp's SSH, assuming one is set up in docker-entrypoint"
+       "./AzureUtil db"
+       "`tAccess Azure Postgres DB Flexible Server instance with psql"
        "./AzureUtil config"
        "`tShow the WebApp's environment variables in a .env file format"
        "./AzureUtil config setting1=value1 setting2=value2 ..."
