@@ -46,14 +46,11 @@ RUN apt-get update \
     && ln -s /usr/bin/python3 /usr/local/bin/python \
     && apt-get clean
 
+# Enable SSH
 COPY sshd_config /etc/ssh/
 
 RUN dpkg-reconfigure locales
 RUN useradd -m -u 1000 bew
-RUN usermod -aG sudo -s /usr/bin/zsh bew
-COPY zshrc /home/bew/.zshrc
-COPY bashrc /home/bew/.bashrc
-RUN chown -R bew:bew /home/bew
 
 ENV USER=bew
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -61,17 +58,17 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_CTYPE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
-WORKDIR /home/bew/bew
 
-COPY --chown=bew:bew . /home/bew/bew/
-RUN chmod u+x /home/bew/bew/docker-entrypoint
-RUN chmod u+x /home/bew/bew/manage.py
+WORKDIR /parkkihub
+COPY --chown=bew:bew . .
+RUN chmod a+x ./azure-docker-entrypoint.sh
+RUN chmod a+x ./manage.py
 
 EXPOSE 8000 2222
 
-RUN pip3 install -r /home/bew/bew/requirements.txt
-RUN pip3 install -r /home/bew/bew/requirements-dev.txt
-RUN pip3 install -r /home/bew/bew/requirements-test.txt
-RUN pip3 install -r /home/bew/bew/requirements-style.txt
+RUN pip3 install -r ./requirements.txt
+RUN pip3 install -r ./requirements-dev.txt
+RUN pip3 install -r ./requirements-test.txt
+RUN pip3 install -r ./requirements-style.txt
 
-ENTRYPOINT ["./docker-entrypoint"]
+ENTRYPOINT ["./azure-docker-entrypoint.sh"]
