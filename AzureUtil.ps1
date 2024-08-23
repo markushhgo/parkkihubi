@@ -1,6 +1,33 @@
-$resourceGroup = "turku-dev-parkkihub39"
+function Get-BicepParams($path) {
+    return ((az bicep build-params -f $path --stdout 2>$nul | ConvertFrom-Json).parametersJson | ConvertFrom-Json).parameters
+}
 
-$parameters = ((az bicep build-params -f .\template.bicepparam --stdout 2>$nul | ConvertFrom-Json).parametersJson | ConvertFrom-Json).parameters
+function Get-JsonParams($path) {
+    return (Get-Content $path | ConvertFrom-Json)
+}
+
+$secretParameters = Get-JsonParams ./secrets.json
+
+function Get-SecretParameter($key) {
+    return $secretParameters.$key
+}
+
+function Get-SecretParametersStringJoinedBySpaceExceptResourceGroup {
+    return $secretParameters.PSObject.Properties | Where-Object { $_.Name -ne "resourceGroup" } | ForEach-Object { "$($_.Name)=$($_.Value)" }
+}
+
+$resourceGroup = Get-SecretParameter resourceGroup
+if ($null -eq $resourceGroup) {
+    "Create a secrets.json file that contains the resource group name that you want to maintain using AzureUtil.ps1:"
+    "{"
+    "`t""resourceGroup"": ""my-resource-group"""
+    "}"
+    "If deploying a new resource group, also provide all secrets marked with @secure in template.bicep."
+    return
+}
+$env:RESOURCE_PREFIX = $resourceGroup
+
+$parameters = Get-BicepParams ./template.bicepparam
 
 function Get-FromParameters($key) {
     return $parameters.$key.value
@@ -114,6 +141,7 @@ function Test-AzureStorageConnection {
 function Open-AzurePostgresDb {
     Enable-PublicAccessToDb $true
     "Connecting to db..."
+    $env:PGPASSWORD = Get-SecretParameter dbPassword
     psql -h "$db.postgres.database.azure.com" -U $dbUser -d $dbDatabase
     Enable-PublicAccessToDb $false
     "Done"
@@ -122,7 +150,8 @@ function Open-AzurePostgresDb {
 function Import-AzurePostgresDbDump($dumpFile) {
     Enable-PublicAccessToDb $true
     "Importing db dump..."
-    $dbPassword = (Read-Host "Enter db user password" -MaskInput)
+    $dbPassword = Get-SecretParameter dbPassword
+    $env:PGPASSWORD = Get-SecretParameter dbAdminPassword
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -c "CREATE USER $dbUser WITH ENCRYPTED PASSWORD '$dbPassword'; ALTER USER $dbUser CREATEDB; GRANT $dbUser TO $dbAdminUser; GRANT ALL ON SCHEMA public TO $dbUser;"
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -f $dumpFile
     Enable-PublicAccessToDb $false
@@ -213,7 +242,7 @@ function Show-Usage {
     "Usage:"
     ""
     "./AzureUtil deploy"
-    "`tCreate a new resource group and deploy resources to it using template.bicep and parameters from parameters.json"
+    "`tCreate a new resource group and deploy resources to it using template.bicep and parameters from template.bicepparam, and from secrets.json which is excluded from version control and can thus contain secrets"
     "./AzureUtil build [api|tileserver|ui] [path]"
     "`tBuild a new image in the WebApp's Azure container registry"
     "./AzureUtil importimage [api|tileserver|ui] [docker.io/helsinki/tileserver-gl]"
@@ -243,9 +272,7 @@ function Show-Usage {
 switch ($args[0]) {
     "deploy" {
         az group create -l swedencentral -n $resourceGroup
-        $dbAdminPassword = (Read-Host "Enter db admin password" -MaskInput)
-        $dbPassword = (Read-Host "Enter db user password" -MaskInput)
-        az deployment group create --template-file .\template.bicep --parameters 'template.bicepparam' --parameters dbAdminPassword=$dbAdminPassword dbPassword=$dbPassword --resource-group $resourceGroup
+        az deployment group create --template-file ./template.bicep --parameters 'template.bicepparam' --parameters (Get-SecretParametersStringJoinedBySpaceExceptResourceGroup) --resource-group $resourceGroup
     }
     "build" {
         $imageName = Get-ImageName $args[1]

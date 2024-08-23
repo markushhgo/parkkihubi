@@ -31,6 +31,10 @@ param dbAdminPassword string = ''
 param dbPassword string = ''
 param apiUrl string
 
+// Application specific parameters
+@secure()
+param secretKey string = ''
+
 param apiAppSettings object = {
   ALLOWED_HOSTS: '${apiWebAppName}.azurewebsites.net,testiparkki.turku.fi,127.0.0.1,localhost'
   EMAIL_URL: 'smtp://smtp.turku.fi:25'
@@ -38,7 +42,7 @@ param apiAppSettings object = {
   MEDIA_ROOT: '/fileshare/mediaroot'
   MEDIA_URL: '/media/'
   RUN_MODE: 'production'
-  SECRET_KEY: 'zvy1rFWcIa0TJauTOhh8hJFEAwxf0fy7jAoUZWGoNV6Nyc0zUHp2A6uSsat9'
+  SECRET_KEY: secretKey
   SENTRY_DSN: 'https://a370518c0c0c46c39a2705c91f738998@sentry.haltu.net/29'
   STATIC_ROOT: '/fileshare/staticroot'
   STATIC_URL: '/static/'
@@ -61,10 +65,11 @@ var webAppRequirements = [
   {
     name: apiWebAppName
     image: apiImageName
-    appSettings: union(apiAppSettings, {
+    appSettings: {
       DATABASE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::dbUrlSecret.name})'
       CACHE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::cacheUrlSecret.name})'
-    })
+      ...apiAppSettings
+    }
     fileshares: {
       files: '/fileshare'
     }
@@ -72,17 +77,18 @@ var webAppRequirements = [
   {
     name: apiReplicaWebAppName
     image: apiImageName
-    appSettings: union(apiAppSettings, {
+    appSettings: {
       DATABASE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::dbReplicaUrlSecret.name})'
       CACHE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::cacheReplicaUrlSecret.name})'
-    })
+      ...apiAppSettings
+    }
     fileshares: {
       files: '/fileshare'
     }
   }
 ]
 
-var fileshareNames = union(flatten(map(webAppRequirements, x => objectKeys(x.fileshares))), [])
+var fileshareNames = union(flatten(map(webAppRequirements, x => objectKeys(x.fileshares))), []) // union removes duplicate keys
 
 var dnsZoneRequirements = [
   'privatelink.azurecr.io'
@@ -146,14 +152,14 @@ var privateEndpointRequirements = [
   }
   {
     name: '${dbServerName}-endpoint'
-    privateLinkServiceId: dbs[0].id
+    privateLinkServiceId: db.id
     groupId: 'postgresqlServer'
     privateDnsZoneName: 'privatelink.postgres.database.azure.com'
     privateDnsZoneId: dnsZone[2].id
   }
   {
     name: '${dbServerReplicaName}-endpoint'
-    privateLinkServiceId: dbs[1].id
+    privateLinkServiceId: dbReplica.id
     groupId: 'postgresqlServer'
     privateDnsZoneName: 'privatelink.postgres.database.azure.com'
     privateDnsZoneId: dnsZone[2].id
@@ -168,7 +174,6 @@ resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
       name: 'PerGB2018'
     }
     retentionInDays: 30
-    workspaceCapping: {}
   }
 }
 
@@ -193,7 +198,6 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
       enabled: false
       enforcement: 'AllowUnencrypted'
     }
-    virtualNetworkPeerings: []
     enableDdosProtection: false
   }
 
@@ -229,7 +233,6 @@ resource dnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = [
   for dnsZoneRequirement in dnsZoneRequirements: {
     name: dnsZoneRequirement
     location: 'global'
-    properties: {}
   }
 ]
 
@@ -303,59 +306,70 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-11-01-pr
   ]
 }
 
-resource dbs 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = [
-  for isPrimary in [true, false]: {
-    name: isPrimary ? dbServerName : dbServerReplicaName
-    location: location
-    sku: {
-      //name: 'Standard_B1ms'
-      //tier: 'Burstable' // TODO: must be above Burstable for replication
-      name: 'Standard_D2ds_v5'
-      tier: 'GeneralPurpose'
-}
-    properties: {
-      //replicationRole: 'AsyncReplica'
-      replica: {
-        role: isPrimary ? 'Primary' : 'AsyncReplica'
-      }
-      sourceServerResourceId: isPrimary ? null : resourceId('Microsoft.DBforPostgreSQL/flexibleServers', dbServerName)
-      storage: {
-        iops: 120
-        tier: 'P4'
-        storageSizeGB: 32
-        autoGrow: 'Disabled'
-      }
-      network: {
-        publicNetworkAccess: 'Disabled'
-      }
-      dataEncryption: {
-        type: 'SystemManaged'
-      }
-      authConfig: {
-        activeDirectoryAuth: 'Disabled'
-        passwordAuth: 'Enabled'
-      }
-      version: '16'
-      administratorLogin: dbAdminUsername
-      administratorLoginPassword: dbAdminPassword
-      availabilityZone: '2'
-    }
-    dependsOn: isPrimary
-      ? [
-          dnsZone[2]
-          vnet::subnets[1]
-        ]
-      : [
-          dnsZone[2]
-          vnet::subnets[1]
-          resourceId('Microsoft.DBforPostgreSQL/flexibleServers', dbServerName)
-        ]
+var dbProperties = {
+  storage: {
+    iops: 120
+    tier: 'P4'
+    storageSizeGB: 32
+    autoGrow: 'Disabled'
   }
-]
+  network: {
+    publicNetworkAccess: 'Disabled'
+  }
+  dataEncryption: {
+    type: 'SystemManaged'
+  }
+  authConfig: {
+    activeDirectoryAuth: 'Disabled'
+    passwordAuth: 'Enabled'
+  }
+  version: '16'
+  administratorLogin: dbAdminUsername
+  administratorLoginPassword: dbAdminPassword
+  availabilityZone: '2'
+}
+
+var dbSku = {
+  // Must be above Burstable for replication
+  name: 'Standard_D2ds_v5'
+  tier: 'GeneralPurpose'
+}
+
+resource db 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = {
+  name: dbServerName
+  location: location
+  sku: dbSku
+  properties: {
+    replicationRole: 'Primary'
+    createMode: 'Default'
+    ...dbProperties
+  }
+  dependsOn: [
+    dnsZone[2]
+    vnet::subnets[1]
+  ]
+}
+
+resource dbReplica 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = {
+  name: dbServerReplicaName
+  location: location
+  sku: dbSku
+  properties: {
+    replicationRole: 'AsyncReplica'
+    createMode: 'Replica'
+    sourceServerResourceId: db.id
+    ...dbProperties
+  }
+  dependsOn: [
+    dnsZone[2]
+    vnet::subnets[1]
+    waitForDbReadyAndConfigured
+  ]
+}
 
 resource dbConfigurationClientEncoding 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2023-12-01-preview' = {
   name: 'client_encoding'
-  parent: dbs[0]
+  parent: db
   properties: {
     value: 'UTF8'
     source: 'user-override'
@@ -365,7 +379,7 @@ resource dbConfigurationClientEncoding 'Microsoft.DBforPostgreSQL/flexibleServer
 
 resource dbConfigurationAzureExtensions 'Microsoft.DBforPostgreSQL/flexibleServers/configurations@2023-12-01-preview' = {
   name: 'azure.extensions'
-  parent: dbs[0]
+  parent: db
   properties: {
     value: dbPostgresExtensions
     source: 'user-override'
@@ -375,7 +389,7 @@ resource dbConfigurationAzureExtensions 'Microsoft.DBforPostgreSQL/flexibleServe
 
 resource dbDatabase 'Microsoft.DBforPostgreSQL/flexibleServers/databases@2023-12-01-preview' = {
   name: dbName
-  parent: dbs[0]
+  parent: db
   properties: {
     charset: 'UTF8'
     collation: 'fi_FI.utf8'
@@ -392,7 +406,23 @@ resource waitForDbReady 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
     cleanupPreference: 'Always'
     retentionInterval: 'PT1H'
   }
-  dependsOn: [dbs[0]]
+  dependsOn: [db]
+}
+
+resource waitForDbReadyAndConfigured 'Microsoft.Resources/deploymentScripts@2023-08-01' = {
+  kind: 'AzurePowerShell'
+  name: 'waitForDbReadyAndConfigured'
+  location: location
+  properties: {
+    azPowerShellVersion: '3.0'
+    scriptContent: 'start-sleep -Seconds 120'
+    cleanupPreference: 'Always'
+    retentionInterval: 'PT1H'
+  }
+  dependsOn: [
+    dbConfigurationClientEncoding
+    dbConfigurationAzureExtensions
+  ]
 }
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
@@ -408,7 +438,6 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
     allowSharedKeyAccess: true // Required for uploading files with Azure CLI
     largeFileSharesState: 'Enabled'
     networkAcls: {
-      bypass: 'AzureServices' // TODO: try remove
       defaultAction: 'Deny'
     }
     supportsHttpsTrafficOnly: true
@@ -456,6 +485,10 @@ resource privateEndpoints 'Microsoft.Network/privateEndpoints@2023-11-01' = [
     name: privateEndpointRequirement.name
     location: location
     properties: {
+      customNetworkInterfaceName: '${privateEndpointRequirement.name}-nic'
+      subnet: {
+        id: vnet::subnets[1].id
+      }
       privateLinkServiceConnections: [
         {
           name: privateEndpointRequirement.name
@@ -465,10 +498,6 @@ resource privateEndpoints 'Microsoft.Network/privateEndpoints@2023-11-01' = [
           }
         }
       ]
-      customNetworkInterfaceName: '${privateEndpointRequirement.name}-nic'
-      subnet: {
-        id: vnet::subnets[1].id
-      }
     }
   }
 ]
@@ -501,12 +530,16 @@ resource webApps 'Microsoft.Web/sites@2023-12-01' = [
     properties: {
       serverFarmId: serverfarmPlan.id
       reserved: true
-      isXenon: false
       hyperV: false
-      dnsConfiguration: {}
       vnetRouteAllEnabled: true
       vnetImagePullEnabled: true
       vnetContentShareEnabled: false
+      clientAffinityEnabled: false
+      httpsOnly: true
+      redundancyMode: 'None'
+      publicNetworkAccess: 'Enabled'
+      virtualNetworkSubnetId: vnet::subnets[3].id
+      keyVaultReferenceIdentity: 'SystemAssigned'
       siteConfig: {
         numberOfWorkers: 1
         linuxFxVersion: 'DOCKER|${containerRegistryName}.azurecr.io/${webAppRequirement.image}:latest'
@@ -552,33 +585,19 @@ resource webApps 'Microsoft.Web/sites@2023-12-01' = [
           }
         ]
         appSettings: map(
-          items(union(webAppRequirement.appSettings, {
+          items({
             DOCKER_ENABLE_CI: 'true'
             APPLICATIONINSIGHTS_CONNECTION_STRING: appInsights.properties.ConnectionString
             ApplicationInsightsAgent_EXTENSION_VERSION: '~3'
             XDT_MicrosoftApplicationInsights_Mode: 'Recommended'
-          })),
+            ...webAppRequirement.appSettings
+          }),
           x => {
             name: x.key
             value: x.value
           }
         )
       }
-      scmSiteAlsoStopped: false
-      clientAffinityEnabled: false
-      clientCertEnabled: false
-      clientCertMode: 'Required'
-      hostNamesDisabled: false
-      vnetBackupRestoreEnabled: false
-      customDomainVerificationId: 'B12052C74774A58FE9AA188A3D712ADE96EB2FE1F40FF5FC31E7A8B9AF742255'
-      containerSize: 0
-      dailyMemoryTimeQuota: 0
-      httpsOnly: true
-      redundancyMode: 'None'
-      publicNetworkAccess: 'Enabled'
-      storageAccountRequired: false
-      virtualNetworkSubnetId: vnet::subnets[3].id
-      keyVaultReferenceIdentity: 'SystemAssigned'
     }
   }
 ]
@@ -641,15 +660,17 @@ resource acrPullRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-
 }
 
 @description('Grant the app service identity with key vault secret user role permissions over the key vault. This allows reading secret contents')
-resource webAppKeyvaultSecretUserRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [for i in range(0, length(webAppRequirements)): {
-  scope: keyvault
-  name: guid(resourceGroup().id, webApps[i].id, keyVaultSecretUserRoleDefinition.id)
-  properties: {
-    roleDefinitionId: keyVaultSecretUserRoleDefinition.id
-    principalId: webApps[i].identity.principalId
-    principalType: 'ServicePrincipal'
+resource webAppKeyvaultSecretUserRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for i in range(0, length(webAppRequirements)): {
+    scope: keyvault
+    name: guid(resourceGroup().id, webApps[i].id, keyVaultSecretUserRoleDefinition.id)
+    properties: {
+      roleDefinitionId: keyVaultSecretUserRoleDefinition.id
+      principalId: webApps[i].identity.principalId
+      principalType: 'ServicePrincipal'
+    }
   }
-}]
+]
 
 @description('Grant the app service identity with ACR pull role permissions over the container registry. This allows pulling container images')
 resource webAppAcrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
