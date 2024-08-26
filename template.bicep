@@ -166,6 +166,38 @@ var privateEndpointRequirements = [
   }
 ]
 
+var goforeIps = {
+  goforeKamppi: '81.175.255.179' // Gofore Kamppi egress
+  goforeTampere: '82.141.89.43' // Gofore Tampere egress
+  goforeVpn: '80.248.248.85' // Gofore VPN egress
+}
+var goforeAndAzureContainerRegistryIps = union(goforeIps, {
+  // Needed to build an image in the container registry, networkRuleBypassOptions: AzureServices is not enough for some reason. These IPs can probably change. Sourced from https://www.microsoft.com/en-us/download/details.aspx?id=56519
+  azureRange1: '51.12.32.0/25'
+  azureRange2: '51.12.32.128/26'
+})
+var goforeStorageNetworkAcls = {
+  defaultAction: 'Deny'
+  ipRules: map(items(goforeIps), ip => {
+    action: 'Allow'
+    value: ip.value
+  })
+}
+var goforeContainerRegistryNetworkRuleSet = {
+  defaultAction: 'Deny'
+  ipRules: map(items(goforeAndAzureContainerRegistryIps), ip => {
+    action: 'Allow'
+    value: ip.value
+  })
+}
+var goforeNetworkAcls = {
+  bypass: 'AzureServices'
+  defaultAction: 'Deny'
+  ipRules: map(items(goforeIps), ip => {
+    value: ip.value
+  })
+}
+
 resource workspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   name: workspaceName
   location: location
@@ -285,7 +317,9 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-11-01-pr
   }
   properties: {
     adminUserEnabled: true // Required to create RBAC rights
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
+    networkRuleBypassOptions: 'AzureServices'
+    networkRuleSet: goforeContainerRegistryNetworkRuleSet
   }
   dependsOn: [
     dnsZone[0]
@@ -314,7 +348,7 @@ var dbProperties = {
     autoGrow: 'Disabled'
   }
   network: {
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
   }
   dataEncryption: {
     type: 'SystemManaged'
@@ -347,6 +381,16 @@ resource db 'Microsoft.DBforPostgreSQL/flexibleServers@2023-12-01-preview' = {
   dependsOn: [
     dnsZone[2]
     vnet::subnets[1]
+  ]
+
+  resource dbFirewallRules 'firewallRules' = [
+    for ip in items(goforeIps): {
+      name: ip.key
+      properties: {
+        startIpAddress: ip.value
+        endIpAddress: ip.value
+      }
+    }
   ]
 }
 
@@ -434,12 +478,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2024-01-01' = {
   kind: 'StorageV2'
   properties: {
     dnsEndpointType: 'Standard'
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
+    networkAcls: goforeStorageNetworkAcls
     allowSharedKeyAccess: true // Required for uploading files with Azure CLI
     largeFileSharesState: 'Enabled'
-    networkAcls: {
-      defaultAction: 'Deny'
-    }
     supportsHttpsTrafficOnly: true
     accessTier: 'Hot' // Required since swedencentral doesn't support others at the time of writing, even if we don't use blob storage
   }
@@ -615,7 +657,10 @@ resource keyvault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enabledForDiskEncryption: true
     enabledForTemplateDeployment: true
     enableRbacAuthorization: true
-    publicNetworkAccess: 'Disabled'
+    enablePurgeProtection: true
+    enableSoftDelete: true
+    publicNetworkAccess: 'Enabled'
+    networkAcls: goforeNetworkAcls
   }
 
   resource dbUrlSecret 'secrets' = {
@@ -649,13 +694,13 @@ resource keyvault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 
 @description('Key Vault Secret User role')
 resource keyVaultSecretUserRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
+  scope: resourceGroup()
   name: '4633458b-17de-408a-b874-0445c86b69e6'
 }
 
 @description('Container Registry AcrPull role')
 resource acrPullRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
-  scope: subscription()
+  scope: resourceGroup()
   name: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
 }
 

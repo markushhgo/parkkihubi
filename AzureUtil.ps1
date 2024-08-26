@@ -73,105 +73,32 @@ function Open-AzureWebAppSsh($webApp) {
     Stop-Job $jobId
 }
 
-function Enable-PublicAccessToDb($enabled) {
-    $myIp = Invoke-RestMethod https://api.ipify.org
-    $firewallRuleName = "Temporary_$($myIp -replace '\.', '_')"
-    if ($enabled) {
-        "Enabling public network access to db..."
-        az postgres flexible-server update --resource-group $resourceGroup --name $db --set network.publicNetworkAccess=Enabled >$nul
-        "Whitelisting current IP in db networking..."
-        az postgres flexible-server firewall-rule create --resource-group $resourceGroup --name $db -r $firewallRuleName --start-ip-address $myIp
-    }
-    else {
-        "Removing current IP whitelisting from db networking..."
-        az postgres flexible-server firewall-rule delete --resource-group $resourceGroup --name $db -r $firewallRuleName -y
-        "Disabling public network access to db..."
-        az postgres flexible-server update --resource-group $resourceGroup --name $db --set network.publicNetworkAccess=Disabled >$nul
-    }
-}
-
-function Enable-PublicAccessToStorage($enabled) {
-    $myIp = Invoke-RestMethod https://api.ipify.org
-    if ($enabled) {
-        if (-not (Test-AzureStorageConnection)) {
-            "Enabling public network access to storage..."
-            az storage account update -n $storage -g $resourceGroup --public-network-access Enabled --default-action Deny >$nul
-            "Whitelisting current IP in storage networking..."
-            az storage account network-rule add -n $storage -g $resourceGroup --ip-address $myIp >$nul
-            do {
-                Start-Sleep -Milliseconds 10
-            } until (Test-AzureStorageConnection)
-        }
-    }
-    else {
-        "Removing current IP whitelisting from storage networking..."
-        az storage account network-rule remove -n $storage -g $resourceGroup --ip-address $myIp >$nul
-        "Disabling public network access to storage..."
-        az storage account update -n $storage -g $resourceGroup --public-network-access Disabled >$nul
-    }
-}
-
-function Enable-PublicAccessToRegistry($enabled) {
-    $myIp = Invoke-RestMethod https://api.ipify.org
-    if ($enabled) {
-        "Enabling public network access to registry..."
-        az acr update -n $registry -g $resourceGroup --public-network-enabled true --default-action Deny >$nul
-        "Whitelisting current IP in registry networking..."
-        az acr network-rule add -n $registry --resource-group $resourceGroup --ip-address $myIp >$nul
-        az acr network-rule add -n $registry --resource-group $resourceGroup --ip-address 51.12.32.6 >$nul
-        az acr network-rule add -n $registry --resource-group $resourceGroup --ip-address 51.12.32.7 >$nul
-    }
-    else {
-        "Removing current IP whitelisting from registry networking..."
-        az acr network-rule remove -n $registry --resource-group $resourceGroup --ip-address 51.12.32.7 >$nul
-        az acr network-rule remove -n $registry --resource-group $resourceGroup --ip-address 51.12.32.6 >$nul
-        az acr network-rule remove -n $registry --resource-group $resourceGroup --ip-address $myIp >$nul
-        "Disabling public network access to registry..."
-        az acr update -n $registry -g $resourceGroup --public-network-enabled false >$nul
-    }
-}
-
-function Test-AzureStorageConnection {
-    $myIp = Invoke-RestMethod https://api.ipify.org
-    $isPublicAccessAllowed = (az storage account show -n $storage --query "publicNetworkAccess" --resource-group $resourceGroup -o tsv) -eq 'Enabled'
-    $isMyIpAllowed = (az storage account show -n $storage --query "networkRuleSet.ipRules[?ipAddressOrRange=='$myIp']" --resource-group $resourceGroup).Length -gt 0
-    return $isPublicAccessAllowed -and $isMyIpAllowed
-}
-
 function Open-AzurePostgresDb {
-    Enable-PublicAccessToDb $true
     "Connecting to db..."
     $env:PGPASSWORD = Get-SecretParameter dbPassword
     psql -h "$db.postgres.database.azure.com" -U $dbUser -d $dbDatabase
-    Enable-PublicAccessToDb $false
     "Done"
 }
 
 function Import-AzurePostgresDbDump($dumpFile) {
-    Enable-PublicAccessToDb $true
     "Importing db dump..."
     $dbPassword = Get-SecretParameter dbPassword
     $env:PGPASSWORD = Get-SecretParameter dbAdminPassword
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -c "CREATE USER $dbUser WITH ENCRYPTED PASSWORD '$dbPassword'; ALTER USER $dbUser CREATEDB; GRANT $dbUser TO $dbAdminUser; GRANT ALL ON SCHEMA public TO $dbUser;"
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -f $dumpFile
-    Enable-PublicAccessToDb $false
     "Done"
 }
 
 function Show-FilesInFileshare($fileshare, $path) {
-    Enable-PublicAccessToStorage $true
     if ($path) {
         az storage file list --share-name $fileshare --account-name $storage --query [*].name --account-key (az storage account keys list -g $resourceGroup -n $storage --query [0].value) --path $path
     }
     else {
         az storage file list --share-name $fileshare --account-name $storage --query [*].name --account-key (az storage account keys list -g $resourceGroup -n $storage --query [0].value)
     }
-    Enable-PublicAccessToStorage $false
 }
 
 function Copy-FilesToFileshare($fileshare, $paths) {
-    Enable-PublicAccessToStorage $true
-    Start-Sleep 20
     foreach ($path in $paths) {
         if ($path -match "=") {
             $parts = $path -split "="
@@ -184,7 +111,6 @@ function Copy-FilesToFileshare($fileshare, $paths) {
         }
         az storage copy -s $source -d https://$storage.file.core.windows.net/$fileshare/$dest --recursive --account-key (az storage account keys list -g $resourceGroup -n $storage --query [0].value)
     }
-    Enable-PublicAccessToStorage $false
 }
 
 function Show-AzureWebAppLog($webApp) {
@@ -204,9 +130,7 @@ function Invoke-AzureWebAppConfig($webApp, $commandOrConfigs) {
 }
 
 function Invoke-BuildAzureContainerImage($image, $path = ".") {
-    Enable-PublicAccessToRegistry $true
     az acr build --resource-group $resourceGroup --registry $registry --image $image $path
-    Enable-PublicAccessToRegistry $false
 }
 
 function Invoke-ImportAzureContainerImage($image, $source) {
