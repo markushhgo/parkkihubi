@@ -84,7 +84,7 @@ function Import-AzurePostgresDbDump($dumpFile) {
     "Importing db dump..."
     $dbPassword = Get-SecretParameter dbPassword
     $env:PGPASSWORD = Get-SecretParameter dbAdminPassword
-    psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -c "CREATE USER $dbUser WITH ENCRYPTED PASSWORD '$dbPassword'; ALTER USER $dbUser CREATEDB; GRANT $dbUser TO $dbAdminUser; GRANT ALL ON SCHEMA public TO $dbUser;"
+    psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -c "CREATE USER ""$dbUser"" WITH ENCRYPTED PASSWORD '$dbPassword'; ALTER USER ""$dbUser"" CREATEDB; GRANT ""$dbUser"" TO $dbAdminUser; GRANT ALL ON SCHEMA public TO ""$dbUser"";"
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -f $dumpFile
     "Done"
 }
@@ -197,6 +197,7 @@ switch ($args[0]) {
     "deploy" {
         az group create -l swedencentral -n $resourceGroup
         az deployment group create --template-file ./template.bicep --parameters 'template.bicepparam' --parameters (Get-SecretParametersStringJoinedBySpaceExceptResourceGroup) --resource-group $resourceGroup
+        return
     }
     "build" {
         $imageName = Get-ImageName $args[1]
@@ -204,6 +205,7 @@ switch ($args[0]) {
             Invoke-BuildAzureContainerImage $imageName $args[2]
         }
         else { Show-Usage }
+        return
     }
     "importimage" {
         $imageName = Get-ImageName $args[1]
@@ -211,6 +213,7 @@ switch ($args[0]) {
             Invoke-ImportAzureContainerImage $imageName $args[2]
         }
         else { Show-Usage }
+        return
     }
     "log" {
         $webAppName = Get-WebAppName $args[1]
@@ -218,6 +221,7 @@ switch ($args[0]) {
             Show-AzureWebAppLog $webAppName
         }
         else { Show-Usage }
+        return
     }
     "ssh" {
         $webAppName = Get-WebAppName $args[1]
@@ -225,12 +229,15 @@ switch ($args[0]) {
             Open-AzureWebAppSsh $webAppName
         }
         else { Show-Usage }
+        return
     }
     "db" {
         Open-AzurePostgresDb
+        return
     }
     "dbimport" {
         Import-AzurePostgresDbDump $args[1]
+        return
     }
     "config" {
         $webAppName = Get-WebAppName $args[1]
@@ -238,6 +245,7 @@ switch ($args[0]) {
             Invoke-AzureWebAppConfig $webAppName ($args | Select-Object -Skip 2)
         }
         else { Show-Usage }
+        return
     }
     "files" {
         $fileshare = Get-WebAppFileshare $args[1]
@@ -245,6 +253,7 @@ switch ($args[0]) {
             Show-FilesInFileshare $fileshare $args[2]
         }
         else { Show-Usage }
+        return
     }
     "copyfiles" {
         $fileshare = Get-WebAppFileshare $args[1]
@@ -252,9 +261,11 @@ switch ($args[0]) {
             Copy-FilesToFileshare $fileshare ($args | Select-Object -Skip 2)
         }
         else { Show-Usage }
+        return
     }
     "param" {
         Write-Output (Get-FromParameters $args[1])
+        return
     }
     Default {
         Show-Usage
