@@ -6,12 +6,17 @@ param apiWebAppName string
 param apiReplicaWebAppName string
 @description('Cache name. Must be globally unique')
 param cacheName string
+@description('Key vault name. Must be globally unique. Lowercase and numbers only')
+@maxLength(24)
+@minLength(3)
 param keyvaultName string
 param serverfarmPlanName string
 @description('Storage account name. Must be globally unique. Lowercase and numbers only')
 @maxLength(24)
 @minLength(3)
 param storageAccountName string
+param apiOutboundIpName string
+param natGatewayName string
 param vnetName string
 @description('Container registry name. Must be globally unique. Alphanumeric only')
 @maxLength(50)
@@ -30,13 +35,14 @@ param dbAdminPassword string = ''
 @secure()
 param dbPassword string = ''
 param apiUrl string
+param apiReplicaUrl string
 
 // Application specific parameters
 @secure()
 param secretKey string = ''
 
 param apiAppSettings object = {
-  ALLOWED_HOSTS: '${apiWebAppName}.azurewebsites.net,testiparkki.turku.fi,127.0.0.1,localhost'
+  ALLOWED_HOSTS: '${apiWebAppName}.azurewebsites.net,testiparkki.turku.fi,127.0.0.1,localhost' // TODO
   EMAIL_URL: 'smtp://smtp.turku.fi:25'
   ENABLE_SSH: 'true'
   MEDIA_ROOT: '/fileshare/mediaroot'
@@ -65,6 +71,8 @@ var webAppRequirements = [
   {
     name: apiWebAppName
     image: apiImageName
+    allowKeyvaultSecrets: true
+    applicationGatewayAccessOnly: true
     appSettings: {
       DATABASE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::dbUrlSecret.name})'
       CACHE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::cacheUrlSecret.name})'
@@ -77,6 +85,8 @@ var webAppRequirements = [
   {
     name: apiReplicaWebAppName
     image: apiImageName
+    allowKeyvaultSecrets: true
+    applicationGatewayAccessOnly: true
     appSettings: {
       DATABASE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::dbReplicaUrlSecret.name})'
       CACHE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::cacheReplicaUrlSecret.name})'
@@ -103,21 +113,19 @@ var subnetRequirements = [
     name: 'default'
     delegations: []
     serviceEndpoints: []
+    enableNatGateway: false
   }
   {
     name: 'azureservices'
     delegations: []
     serviceEndpoints: []
-  }
-  {
-    name: 'applicationgateway'
-    delegations: []
-    serviceEndpoints: []
+    enableNatGateway: false
   }
   {
     name: 'api'
     delegations: ['Microsoft.Web/serverfarms'] // Required
     serviceEndpoints: []
+    enableNatGateway: true
   }
 ]
 
@@ -219,6 +227,27 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
+resource apiOutboundIp 'Microsoft.Network/publicIPAddresses@2024-01-01' existing = {
+  name: apiOutboundIpName
+  scope: resourceGroup('turku-common')
+}
+
+resource natGateway 'Microsoft.Network/natGateways@2024-01-01' = {
+  name: natGatewayName
+  location: location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    idleTimeoutInMinutes: 4
+    publicIpAddresses: [
+      {
+        id: apiOutboundIp.id
+      }
+    ]
+  }
+}
+
 resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: vnetName
   location: location
@@ -239,6 +268,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-11-01' = {
       name: subnetRequirements[i].name
       properties: {
         addressPrefixes: ['10.0.${i}.0/24']
+        natGateway: subnetRequirements[i].enableNatGateway ? { id: natGateway.id } : null
         serviceEndpoints: [
           for serviceEndpoint in subnetRequirements[i].serviceEndpoints: {
             service: serviceEndpoint
@@ -561,6 +591,34 @@ resource privateDnsZoneGroups 'Microsoft.Network/privateEndpoints/privateDnsZone
   }
 ]
 
+resource applicationGatewayVnet 'Microsoft.Network/virtualNetworks@2020-11-01' existing = {
+  name: 'turku-common-vnet'
+  scope: resourceGroup('turku-common')
+}
+
+resource applicationGatewaySubnet 'Microsoft.Network/virtualNetworks/subnets@2022-01-01' existing = {
+  name: 'AgwSubnet'
+  parent: applicationGatewayVnet
+}
+
+var ipSecurityRestrictionsForApplicationGatewayAccessOnly = [
+  {
+    vnetSubnetResourceId: applicationGatewaySubnet.id
+    action: 'Allow'
+    tag: 'Default'
+    priority: 100
+    name: 'AllowAppGWInbound'
+    description: 'Allow HTTP/HTTPS from Application Gateway subnet'
+  }
+  {
+    ipAddress: 'Any'
+    action: 'Deny'
+    priority: 2147483647
+    name: 'Deny all'
+    description: 'Deny all access'
+  }
+]
+
 resource webApps 'Microsoft.Web/sites@2023-12-01' = [
   for webAppRequirement in webAppRequirements: {
     name: webAppRequirement.name
@@ -580,7 +638,7 @@ resource webApps 'Microsoft.Web/sites@2023-12-01' = [
       httpsOnly: true
       redundancyMode: 'None'
       publicNetworkAccess: 'Enabled'
-      virtualNetworkSubnetId: vnet::subnets[3].id
+      virtualNetworkSubnetId: vnet::subnets[2].id
       keyVaultReferenceIdentity: 'SystemAssigned'
       siteConfig: {
         numberOfWorkers: 1
@@ -590,6 +648,12 @@ resource webApps 'Microsoft.Web/sites@2023-12-01' = [
         http20Enabled: false
         functionAppScaleLimit: 0
         minimumElasticInstanceCount: 1
+        ipSecurityRestrictionsDefaultAction: webAppRequirement.applicationGatewayAccessOnly ? 'Deny' : 'Allow'
+        ipSecurityRestrictions: webAppRequirement.applicationGatewayAccessOnly
+          ? ipSecurityRestrictionsForApplicationGatewayAccessOnly
+          : []
+        scmIpSecurityRestrictionsDefaultAction: webAppRequirement.applicationGatewayAccessOnly ? 'Deny' : 'Allow'
+        scmIpSecurityRestrictionsUseMain: true
         azureStorageAccounts: reduce(
           items(webAppRequirement.fileshares),
           {},
@@ -608,24 +672,6 @@ resource webApps 'Microsoft.Web/sites@2023-12-01' = [
               }
             })
         )
-        ipSecurityRestrictions: [
-          {
-            ipAddress: 'Any'
-            action: 'Allow'
-            priority: 2147483647
-            name: 'Allow all'
-            description: 'Allow all access'
-          }
-        ]
-        scmIpSecurityRestrictions: [
-          {
-            ipAddress: 'Any'
-            action: 'Allow'
-            priority: 2147483647
-            name: 'Allow all'
-            description: 'Allow all access'
-          }
-        ]
         appSettings: map(
           items({
             DOCKER_ENABLE_CI: 'true'
@@ -706,7 +752,7 @@ resource acrPullRoleDefinition 'Microsoft.Authorization/roleDefinitions@2022-04-
 
 @description('Grant the app service identity with key vault secret user role permissions over the key vault. This allows reading secret contents')
 resource webAppKeyvaultSecretUserRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
-  for i in range(0, length(webAppRequirements)): {
+  for i in range(0, length(webAppRequirements)): if (webAppRequirements[i].allowKeyvaultSecrets) {
     scope: keyvault
     name: guid(resourceGroup().id, webApps[i].id, keyVaultSecretUserRoleDefinition.id)
     properties: {
@@ -718,12 +764,14 @@ resource webAppKeyvaultSecretUserRoleAssignments 'Microsoft.Authorization/roleAs
 ]
 
 @description('Grant the app service identity with ACR pull role permissions over the container registry. This allows pulling container images')
-resource webAppAcrPullRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: containerRegistry
-  name: guid(resourceGroup().id, webApps[0].id, acrPullRoleDefinition.id)
-  properties: {
-    roleDefinitionId: acrPullRoleDefinition.id
-    principalId: webApps[0].identity.principalId
-    principalType: 'ServicePrincipal'
+resource webAppAcrPullRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for i in range(0, length(webAppRequirements)): {
+    scope: containerRegistry
+    name: guid(resourceGroup().id, webApps[i].id, acrPullRoleDefinition.id)
+    properties: {
+      roleDefinitionId: acrPullRoleDefinition.id
+      principalId: webApps[i].identity.principalId
+      principalType: 'ServicePrincipal'
+    }
   }
-}
+]

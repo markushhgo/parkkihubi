@@ -45,6 +45,7 @@ $dbAdminUser = Get-FromParameters dbAdminUsername
 $dbUser = Get-FromParameters dbUsername
 $dbDatabase = Get-FromParameters dbName
 $storage = Get-FromParameters storageAccountName
+$keyvault = Get-FromParameters keyvaultName
 $sshPort = 59123
 
 function Test-NetConnectionFaster($Addr, [int] $Port) {
@@ -117,9 +118,23 @@ function Show-AzureWebAppLog($webApp) {
     az webapp log tail --resource-group $resourceGroup --name $webApp
 }
 
+function Get-SecretFromKeyvault($secretName) {
+    return az keyvault secret show --vault-name $keyvault -n $secretName -o tsv --query value
+}
+
 function Invoke-AzureWebAppConfig($webApp, $commandOrConfigs) {
+    function Parse($value) {
+        $secretName = [regex]::Match($value, 'SecretName=(\w+)').Groups[1].Value
+        if ($secretName) {
+            return Get-SecretFromKeyvault $secretName
+        }
+        else {
+            return $value
+        }
+    }
+
     if ($null -eq $commandOrConfigs) {
-        az webapp config appsettings list --resource-group $resourceGroup --name $webApp | ConvertFrom-Json | Sort-Object -Property name | ForEach-Object { "$($_.name)=$($_.value)" }
+        az webapp config appsettings list --resource-group $resourceGroup --name $webApp | ConvertFrom-Json | Sort-Object -Property name | ForEach-Object { "$($_.name)=$(Parse($_.value))" }
     }
     elseif ($commandOrConfigs[0] -eq "delete") {
         az webapp config appsettings delete --resource-group $resourceGroup --name $webApp --setting-names ($commandOrConfigs | Select-Object -Skip 1)
@@ -180,7 +195,7 @@ function Show-Usage {
     "./AzureUtil dbimport [dump.sql]"
     "`tImport a DB dump file to Azure Postgres DB Flexible Server instance with psql"
     "./AzureUtil config [api|tileserver|ui]"
-    "`tShow the WebApp's environment variables in a .env file format"
+    "`tShow the WebApp's environment variables in a .env file format, retrieving Key Vault secret references"
     "./AzureUtil config [api|tileserver|ui] setting1=value1 setting2=value2 ..."
     "`tAssign the given values in the WebApp's environment variables"
     "./AzureUtil config delete [api|tileserver|ui] setting1 setting2 ..."
@@ -196,7 +211,7 @@ function Show-Usage {
 switch ($args[0]) {
     "deploy" {
         az group create -l swedencentral -n $resourceGroup
-        az deployment group create --template-file ./template.bicep --parameters 'template.bicepparam' --parameters (Get-SecretParametersStringJoinedBySpaceExceptResourceGroup) --resource-group $resourceGroup
+        az deployment group create --template-file ./template.bicep --parameters 'template.bicepparam' --parameters (Get-SecretParametersStringJoinedBySpaceExceptResourceGroup) --resource-group $resourceGroup @($args | Select-Object -Skip 1)
         return
     }
     "build" {
