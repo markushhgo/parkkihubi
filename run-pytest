@@ -42,7 +42,7 @@ misc_opts=(
 )
 
 
-docker_compose_exec=("docker-compose" "exec")
+docker_compose_exec=("docker compose" "exec")
 
 if ! tty -s; then
     docker_compose_exec+=("-T")  # If there is no TTY available, pass -T
