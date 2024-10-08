@@ -34,7 +34,9 @@ param dbUsername string
 param dbAdminPassword string = ''
 @secure()
 param dbPassword string = ''
+param apiInternalUrl string
 param apiUrl string
+param apiReplicaInternalUrl string
 param apiReplicaUrl string
 
 // Application specific parameters
@@ -42,7 +44,6 @@ param apiReplicaUrl string
 param secretKey string = ''
 
 param apiAppSettings object = {
-  ALLOWED_HOSTS: '${apiWebAppName}.azurewebsites.net,testiparkki.turku.fi,127.0.0.1,localhost' // TODO
   EMAIL_URL: 'smtp://smtp.turku.fi:25'
   ENABLE_SSH: 'true'
   MEDIA_ROOT: '/fileshare/mediaroot'
@@ -74,6 +75,8 @@ var webAppRequirements = [
     allowKeyvaultSecrets: true
     applicationGatewayAccessOnly: true
     appSettings: {
+      ALLOWED_HOSTS: apiInternalUrl
+      CSRF_TRUSTED_ORIGINS: apiUrl
       DATABASE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::dbUrlSecret.name})'
       CACHE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::cacheUrlSecret.name})'
       ...apiAppSettings
@@ -88,6 +91,8 @@ var webAppRequirements = [
     allowKeyvaultSecrets: true
     applicationGatewayAccessOnly: true
     appSettings: {
+      ALLOWED_HOSTS: apiReplicaInternalUrl
+      CSRF_TRUSTED_ORIGINS: apiReplicaUrl
       DATABASE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::dbReplicaUrlSecret.name})'
       CACHE_URL: '@Microsoft.KeyVault(VaultName=${keyvault.name};SecretName=${keyvault::cacheReplicaUrlSecret.name})'
       ...apiAppSettings
