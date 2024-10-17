@@ -15,7 +15,7 @@ fi
 
 if [[ "$USE_DOCKER" == "1" ]] || [[ "$USE_DOCKER" == "yes" ]]; then
     cp -n local_settings.py.tpl_dev local_settings.py
-    docker-compose up -d
+    docker compose up -d
 else
     exec pytest "$@"
     exit $?
@@ -41,23 +41,28 @@ misc_opts=(
     "-o" "cache_dir=/tmp/pytest_cache"
 )
 
-docker_compose_exec=("docker-compose" "exec")
+# docker compose down
+docker_compose_exec=("docker compose" "exec")
+
 if ! tty -s; then
     docker_compose_exec+=("-T")  # If there is no TTY available, pass -T
 fi
+echo "-------------------------!!!!!!!!!!!!!11--------------"
+echo "docker_compose_exec: ${docker_compose_exec[@]}"
+echo "-------------------------!!!!!!!!!!!!!11--------------"
 
 # Wait until the database is ready
-"${docker_compose_exec[@]}" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
+""${docker_compose_exec[@]}"" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
 
 set +e
+""${docker_compose_exec[@]}"" runserver /home/bew/.venv/bin/pytest "${misc_opts[@]}" "${opts[@]}"
 
-"${docker_compose_exec[@]}" runserver /home/bew/.venv/bin/pytest "${misc_opts[@]}" "${opts[@]}"
 exit_code=$?
 
 set -e
 
 if [[ -n "$xml_file" ]]; then
-    "${docker_compose_exec[@]}" runserver cat /tmp/pytest_junit.xml > "$xml_file"
+    ""${docker_compose_exec[@]}"" runserver cat /tmp/pytest_junit.xml > "$xml_file"
 fi
 
 exit $exit_code
