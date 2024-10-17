@@ -41,7 +41,6 @@ misc_opts=(
     "-o" "cache_dir=/tmp/pytest_cache"
 )
 
-# docker compose down
 docker_compose_exec=("docker compose" "exec")
 
 if ! tty -s; then

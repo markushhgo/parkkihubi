@@ -8,7 +8,7 @@ from rest_framework import generics, serializers
 from rest_framework.response import Response
 
 from ...models import (
-    EventParking, Parking, ParkingCheck, PaymentZone, PermitArea,
+    EventArea, EventParking, Parking, ParkingCheck, PaymentZone, PermitArea,
     PermitLookupItem)
 from ...models.constants import GK25FIN_SRID, WGS84_SRID
 from .permissions import IsEnforcer
@@ -60,10 +60,10 @@ class CheckParking(generics.GenericAPIView):
 
         zone = get_payment_zone(gk25_location, domain)
         area = get_permit_area(gk25_location, domain)
+        event_area = get_event_area(gk25_location, domain)
 
         (allowed_by, parking, end_time) = check_parking(
-            registration_number, zone, area, time, domain)
-
+            registration_number, zone, area, time, domain, event_area)
         allowed = bool(allowed_by)
 
         if not allowed:
@@ -72,7 +72,7 @@ class CheckParking(generics.GenericAPIView):
             # ago (where "a few minutes" is the grace duration)
             past_time = time - get_grace_duration()
             (_allowed_by, parking, end_time) = check_parking(
-                registration_number, zone, area, past_time, domain)
+                registration_number, zone, area, past_time, domain, event_area)
 
         result = {
             "allowed": allowed,
@@ -80,6 +80,7 @@ class CheckParking(generics.GenericAPIView):
             "location": {
                 "payment_zone": zone,
                 "permit_area": area.identifier if area else None,
+                "event_area": event_area.id if event_area else None,
             },
             "time": time,
         }
@@ -132,15 +133,16 @@ def get_permit_area(location, domain):
     area = PermitArea.objects.filter(geom__contains=location, domain=domain).first()
     return area if area else None
 
-# def get_event_area(location, domain):
-#     if location is None:
-#         return None
-#     now = timezone.now()
-#     area = EventArea.objects.filter(geom__contains=location, domain=domain, time_end__gte=now).first()
-#     return area if area else None
+
+def get_event_area(location, domain):
+    if location is None:
+        return None
+    now = timezone.now()
+    area = EventArea.objects.filter(geom__contains=location, domain=domain, time_end__gte=now).first()
+    return area if area else None
 
 
-def check_parking(registration_number, zone, area, time, domain):
+def check_parking(registration_number, zone, area, time, domain, event_area):
     """
     Check parking allowance from the database.
 
@@ -184,7 +186,11 @@ def check_parking(registration_number, zone, area, time, domain):
         .filter(domain=domain)).first()
 
     if active_event_parking:
-        return ("event parking", active_event_parking, active_event_parking.time_end)
+        if active_event_parking.event_area == event_area:
+            return ("event parking", active_event_parking, active_event_parking.time_end)
+        else:
+            # Event parking not parked in the assigned event area, i.e., not allowed.
+            return (None, active_event_parking, active_event_parking.time_end)
 
     return (None, None, None)
 
