@@ -35,6 +35,7 @@ class CheckParkingSerializer(serializers.Serializer):
     registration_number = serializers.CharField(max_length=20)
     location = LocationSerializer()
     time = AwareDateTimeField(required=False)
+    details = serializers.ListSerializer(child=serializers.CharField(), required=False)
 
 
 class CheckParking(generics.GenericAPIView):
@@ -84,6 +85,23 @@ class CheckParking(generics.GenericAPIView):
             },
             "time": time,
         }
+
+        operator_detail, time_start_detail, permissions_detail = get_details(params)
+
+        if operator_detail:
+            result["operator"] = parking.operator.name if parking and parking.operator else None
+
+        if time_start_detail:
+            result["time_start"] = parking.time_start if parking and parking.time_start else None
+
+        if permissions_detail:
+            if isinstance(parking, EventParking):
+                permissions = {"event_area": parking.event_area.origin_id if parking and parking.event_area else None,
+                               "zone": None}
+            else:
+                permissions = {"event_area": None, "zone": parking.zone.number if parking and parking.zone else None}
+            result["permissions"] = permissions
+
         filter = {
             "performer": request.user,
             "time": time,
@@ -100,6 +118,22 @@ class CheckParking(generics.GenericAPIView):
 
         ParkingCheck.objects.create(**filter)
         return Response(result)
+
+
+def get_details(params):
+    details = params.get("details", [])
+    operator = False
+    time_start = False
+    permissions = False
+
+    for detail in [d.lower() for d in details]:
+        if detail == "operator":
+            operator = True
+        if detail == "time_start":
+            time_start = True
+        if detail == "permissions":
+            permissions = True
+    return operator, time_start, permissions
 
 
 def get_location(params):
@@ -178,6 +212,10 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
         if permit_end_time:
             return ("permit", None, permit_end_time)
 
+    for parking in active_parkings:
+        if parking.zone.number > zone:
+            return (None, parking, parking.time_end)
+
     active_event_parking = (
         EventParking.objects
         .registration_number_like(registration_number)
@@ -187,7 +225,7 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
 
     if active_event_parking:
         if active_event_parking.event_area == event_area:
-            return ("event parking", active_event_parking, active_event_parking.time_end)
+            return ("event_parking", active_event_parking, active_event_parking.time_end)
         else:
             # Event parking not parked in the assigned event area, i.e., not allowed.
             return (None, active_event_parking, active_event_parking.time_end)
