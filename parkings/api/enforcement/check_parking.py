@@ -3,15 +3,16 @@ import datetime
 from django.conf import settings
 from django.contrib.gis.gdal.error import GDALException
 from django.contrib.gis.geos import Point
-
 from django.utils import timezone
 from rest_framework import generics, serializers
 from rest_framework.response import Response
+
 from ...models import (
-    EventArea, EventParking, Parking, ParkingCheck, PaymentZone, PermitArea,
-    PermitLookupItem, Permit)
+    EventArea, EventParking, Parking, ParkingCheck, PaymentZone, Permit,
+    PermitArea, PermitLookupItem)
 from ...models.constants import GK25FIN_SRID, WGS84_SRID
 from .permissions import IsEnforcer
+
 
 class PermitPermissionsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,6 +22,7 @@ class PermitPermissionsSerializer(serializers.ModelSerializer):
             "subjects",
             "areas"
         ]
+
 
 class AwareDateTimeField(serializers.DateTimeField):
     default_error_messages = dict(
@@ -104,9 +106,11 @@ class CheckParking(generics.GenericAPIView):
 
         if permissions_detail:
             if isinstance(parking, EventParking):
-                permissions = {"zone": None, "permits": None, "event_area": parking.event_area.origin_id if parking and parking.event_area else None}
+                permissions = {"zone": None, "permits": None,
+                               "event_area": parking.event_area.origin_id if parking and parking.event_area else None}
             else:
-                permissions = {"zone": parking.zone.number if parking and parking.zone else None,"permits": [PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items],"event_area": None}
+                permissions = {"zone": parking.zone.number if parking and parking.zone else None, "permits": [
+                    PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items], "event_area": None}
 
             result["permissions"] = permissions
 
@@ -219,7 +223,6 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
         if permit_end_time:
             return ("permit", None, permit_end_time, permit_lookup_item_qs)
 
-
     for parking in active_parkings:
         if parking.zone.number > zone:
             return (None, parking, parking.time_end, permit_lookup_item_qs)
@@ -236,7 +239,7 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
             return ("event_parking", active_event_parking, active_event_parking.time_end, None)
         else:
             # Event parking not parked in the assigned event area, i.e., not allowed.
-            return (None, active_event_parking, active_event_parking.time_end, None)
+            return (None, active_event_parking, None, None)
 
     return (None, None, None, permit_lookup_item_qs)
 
