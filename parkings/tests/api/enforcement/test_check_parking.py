@@ -324,7 +324,7 @@ def test_check_parking_valid_permit(enforcer_api_client, staff_user):
     assert response.data["allowed"] is True
 
 
-def test_check_parking_valid_permit_details(enforcer_api_client, staff_user):
+def test_check_parking_valid_parking_permit_details(enforcer_api_client, staff_user):
     create_permit_area(enforcer_api_client)
     permit = create_permit(domain=enforcer_api_client.enforcer.enforced_domain)
     data = deepcopy(PARKING_DATA)
@@ -342,7 +342,7 @@ def test_check_parking_valid_permit_details(enforcer_api_client, staff_user):
     assert response.data["permissions"]["permits"][0]["areas"] == permit.areas
 
 
-def test_check_parking_invalid_multiple_permit_details(enforcer_api_client, staff_user):
+def test_check_parking_invalid_location_multiple_permit_details(enforcer_api_client, staff_user):
     create_permit_area(enforcer_api_client)
     create_permit_area(enforcer_api_client, identifier="B", name="Kauppatori", geom=create_area_geom(geom=GEOM_2))
 
@@ -352,7 +352,7 @@ def test_check_parking_invalid_multiple_permit_details(enforcer_api_client, staf
                              start_time=timezone.now() - datetime.timedelta(days=1))
 
     data = deepcopy(INVALID_PARKING_DATA)
-    data["details"] = ["time_start", "operator", "permissions"]
+    data["details"] = ["permissions"]
     response = enforcer_api_client.post(list_url, data=data)
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is False
@@ -361,6 +361,26 @@ def test_check_parking_invalid_multiple_permit_details(enforcer_api_client, staf
     assert response.data["permissions"]["permits"][0]["areas"] == permit_1.areas
     assert response.data["permissions"]["permits"][1]["subjects"] == permit_2.subjects
     assert response.data["permissions"]["permits"][1]["areas"] == permit_2.areas
+
+
+def test_check_parking_valid_parking_with_permit_details(enforcer_api_client, parking_factory, operator):
+    create_permit_area(enforcer_api_client, identifier="B", name="Kauppatori", geom=create_area_geom(geom=GEOM_2))
+
+    permit_1 = create_permit(domain=enforcer_api_client.enforcer.enforced_domain,
+                             start_time=timezone.now() - datetime.timedelta(days=1), area="B")
+
+    zone = create_payment_zone(domain=enforcer_api_client.enforcer.enforced_domain)
+    parking = parking_factory(registration_number="ABC-123", operator=operator, zone=zone, domain=zone.domain)
+    data = deepcopy(PARKING_DATA)
+    data["details"] = ["time_start", "operator", "permissions"]
+    response = enforcer_api_client.post(list_url, data=data)
+    assert response.status_code == HTTP_200_OK
+    assert response.data["allowed"] is True
+    assert len(response.data["permissions"]["permits"]) == 1
+    assert response.data["permissions"]["permits"][0]["subjects"] == permit_1.subjects
+    assert response.data["permissions"]["permits"][0]["areas"] == permit_1.areas
+    assert response.data["time_start"] == parking.time_start
+    assert response.data["operator"] == parking.operator.name
 
 
 def test_check_parking_invalid_time_permit(enforcer_api_client, staff_user):
