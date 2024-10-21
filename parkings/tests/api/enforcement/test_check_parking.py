@@ -55,13 +55,15 @@ GEOM_2 = [
 ]
 
 
-def create_permit_area(client=None, domain=None, allowed_user=None):
+def create_permit_area(client=None, domain=None, allowed_user=None, identifier="A", name="Kamppi", geom=None):
     assert client or (domain and allowed_user)
+    if geom is None:
+        geom = create_area_geom()
     area = PermitArea.objects.create(
         domain=(domain or client.enforcer.enforced_domain),
-        identifier="A",
-        name="Kamppi",
-        geom=create_area_geom())
+        identifier=identifier,
+        name=name,
+        geom=geom)
     area.allowed_users.add(allowed_user or client.auth_user)
     return area
 
@@ -78,21 +80,22 @@ def create_area_geom(geom=GEOM_1):
     return MultiPolygon(polygons)
 
 
-def create_permit(domain, permit_series=None, end_time=None):
+def create_permit(domain, permit_series=None, end_time=None, registration_number="ABC-123", area="A", start_time=None):
     end_time = end_time or timezone.now() + datetime.timedelta(days=1)
-    start_time = timezone.now()
+    if not start_time:
+        start_time = timezone.now()
     series = permit_series or create_permit_series(active=True)
 
     subjects = [
         {
             "end_time": str(end_time),
             "start_time": str(start_time),
-            "registration_number": "ABC-123",
+            "registration_number": registration_number,
         }
     ]
-    areas = [{"area": "A", "end_time": str(end_time), "start_time": str(start_time)}]
+    areas = [{"area": area, "end_time": str(end_time), "start_time": str(start_time)}]
 
-    Permit.objects.create(
+    return Permit.objects.create(
         domain=domain,
         series=series, external_id=12345, subjects=subjects, areas=areas
     )
@@ -144,7 +147,6 @@ def test_check_parking_not_allowed_event_parking_details(
     assert response.data["permissions"]["zone"] is None
     assert response.data["operator"] is None
     assert response.data["time_start"] is None
-
     assert ParkingCheck.objects.filter(
         registration_number=PARKING_DATA["registration_number"]).first().result["allowed"] is False
 
@@ -320,6 +322,45 @@ def test_check_parking_valid_permit(enforcer_api_client, staff_user):
 
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is True
+
+
+def test_check_parking_valid_permit_details(enforcer_api_client, staff_user):
+    create_permit_area(enforcer_api_client)
+    permit = create_permit(domain=enforcer_api_client.enforcer.enforced_domain)
+    data = deepcopy(PARKING_DATA)
+    data["details"] = ["operator", "time_start", "permissions"]
+    response = enforcer_api_client.post(list_url, data=data)
+
+    assert response.status_code == HTTP_200_OK
+    assert response.data["allowed"] is True
+    assert response.data["operator"] is None
+    assert response.data["time_start"] is None
+    assert response.data["permissions"]["zone"] is None
+    assert response.data["permissions"]["event_area"] is None
+    assert len(response.data["permissions"]["permits"]) == 1
+    assert response.data["permissions"]["permits"][0]["subjects"] == permit.subjects
+    assert response.data["permissions"]["permits"][0]["areas"] == permit.areas
+
+
+def test_check_parking_invalid_multiple_permit_details(enforcer_api_client, staff_user):
+    create_permit_area(enforcer_api_client)
+    create_permit_area(enforcer_api_client, identifier="B", name="Kauppatori", geom=create_area_geom(geom=GEOM_2))
+
+    permit_1 = create_permit(domain=enforcer_api_client.enforcer.enforced_domain,
+                             start_time=timezone.now() - datetime.timedelta(days=1))
+    permit_2 = create_permit(domain=enforcer_api_client.enforcer.enforced_domain, area="B",
+                             start_time=timezone.now() - datetime.timedelta(days=1))
+
+    data = deepcopy(INVALID_PARKING_DATA)
+    data["details"] = ["time_start", "operator", "permissions"]
+    response = enforcer_api_client.post(list_url, data=data)
+    assert response.status_code == HTTP_200_OK
+    assert response.data["allowed"] is False
+    assert len(response.data["permissions"]["permits"]) == 2
+    assert response.data["permissions"]["permits"][0]["subjects"] == permit_1.subjects
+    assert response.data["permissions"]["permits"][0]["areas"] == permit_1.areas
+    assert response.data["permissions"]["permits"][1]["subjects"] == permit_2.subjects
+    assert response.data["permissions"]["permits"][1]["areas"] == permit_2.areas
 
 
 def test_check_parking_invalid_time_permit(enforcer_api_client, staff_user):
