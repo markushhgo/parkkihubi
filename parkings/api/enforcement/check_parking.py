@@ -73,7 +73,7 @@ class CheckParking(generics.GenericAPIView):
         area = get_permit_area(gk25_location, domain)
         event_area = get_event_area(gk25_location, domain)
 
-        (allowed_by, parking, end_time, permit_lookup_items, active_event_parkings) = check_parking(
+        (allowed_by, parking, end_time, active_parkings, permit_lookup_items, active_event_parkings) = check_parking(
             registration_number, zone, area, time, domain, event_area)
         allowed = bool(allowed_by)
 
@@ -82,8 +82,20 @@ class CheckParking(generics.GenericAPIView):
             # one that has just expired, i.e. was valid a few minutes
             # ago (where "a few minutes" is the grace duration)
             past_time = time - get_grace_duration()
-            (_allowed_by, parking, end_time, permit_lookup_items, active_event_parkings) = check_parking(
-                registration_number, zone, area, past_time, domain, event_area)
+            (
+                _allowed_by,
+                parking,
+                end_time,
+                active_parkings,
+                permit_lookup_items,
+                active_event_parkings
+            ) = check_parking(
+                registration_number,
+                zone, area,
+                past_time,
+                domain,
+                event_area
+            )
 
         result = {
             "allowed": allowed,
@@ -105,15 +117,17 @@ class CheckParking(generics.GenericAPIView):
             result["time_start"] = parking.time_start if allowed and parking and parking.time_start else None
 
         if permissions_detail:
-            if isinstance(parking, EventParking):
-                permissions = {"zone": None, "permits": None,
-                               "event_areas": [e_p.event_area.origin_id for e_p in active_event_parkings]}
-            else:
-                permissions = {"zone": parking.zone.number if parking and parking.zone else None, "permits": [
-                    PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items],
-                    "event_areas": [e_p.event_area.origin_id for e_p in active_event_parkings]}
-
-            result["permissions"] = permissions
+            result["permissions"] = {
+                "zones": [
+                    p.zone.number for p in active_parkings
+                ],
+                "permits": [
+                    PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items
+                ],
+                "event_areas": [
+                    e_p.event_area.origin_id for e_p in active_event_parkings
+                ]
+            }
 
         filter = {
             "performer": request.user,
@@ -199,7 +213,7 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
     :type area: str|None
     :type domain: parkings.models.EnforcementDomain
     :type time: datetime.datetime
-    :rtype: (str, Parking|None, datetime.datetime, PermitLookupItemQuerySet, EventParkingQuerySet)
+    :rtype: (str, Parking|None, datetime.datetime, ParkingQuerySet, PermitLookupItemQuerySet, EventParkingQuerySet)
     """
     permit_lookup_items = (
         PermitLookupItem.objects
@@ -227,27 +241,25 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
             return ("parking",
                     parking,
                     parking.time_end,
+                    active_parkings,
                     permit_lookup_items,
                     active_event_parkings)
 
     if area:
         permit_end_time = permit_lookup_items.by_area(area).values_list("end_time", flat=True).first()
         if permit_end_time:
-            return ("permit", None, permit_end_time, permit_lookup_items, active_event_parkings)
-
-    for parking in active_parkings:
-        if parking.zone.number > zone:
-            return (None, parking, None, permit_lookup_items, active_event_parkings)
+            return ("permit", None, permit_end_time, active_parkings, permit_lookup_items, active_event_parkings)
 
     for active_event_parking in active_event_parkings:
         if active_event_parking.event_area == event_area:
             return ("event_parking",
                     active_event_parking,
                     active_event_parking.time_end,
+                    active_parkings,
                     permit_lookup_items,
                     active_event_parkings)
 
-    return (None, None, None, permit_lookup_items, active_event_parkings)
+    return (None, None, None, active_parkings, permit_lookup_items, active_event_parkings)
 
 
 def get_grace_duration(default=datetime.timedelta(minutes=15)):
