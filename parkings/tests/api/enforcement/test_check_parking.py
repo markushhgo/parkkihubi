@@ -157,8 +157,8 @@ def test_check_event_parking_parked_in_wrong_event_area_include_details(
     event_area_2 = event_area_factory.create(geom=create_area_geom(geom=GEOM_2), domain=enforcer.enforced_domain)
     # Parked inside event_area_2, i.e., inside GEOM_2, but event_area_1 is assigned
     location = Point(PARKING_DATA_2["location"]["longitude"], PARKING_DATA_2["location"]["latitude"], srid=WGS84_SRID)
-    event_parking = event_parking_factory(registration_number="ABC-123",
-                                          domain=enforcer.enforced_domain, event_area=event_area_1, location=location)
+    event_parking_factory(registration_number="ABC-123", domain=enforcer.enforced_domain,
+                          event_area=event_area_1, location=location)
     data = deepcopy(PARKING_DATA_2)
     data["details"] = ["operator", "time_start", "permissions"]
     response = enforcer_api_client.post(list_url, data=data)
@@ -169,8 +169,8 @@ def test_check_event_parking_parked_in_wrong_event_area_include_details(
     assert response.data["end_time"] is None
     assert response.data["permissions"]["event_area"] == event_area_1.origin_id
     assert response.data["permissions"]["zone"] is None
-    assert response.data["operator"] == event_parking.operator.name
-    assert response.data["time_start"] == event_parking.time_start
+    assert response.data["operator"] is None
+    assert response.data["time_start"] is None
     assert ParkingCheck.objects.filter(
         registration_number=PARKING_DATA["registration_number"]).first().result["allowed"] is False
 
@@ -287,10 +287,10 @@ def test_check_parking_details_invalid_zone(operator, enforcer, enforcer_api_cli
 
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is False
-    assert response.data["end_time"] == parking.time_end
+    assert response.data["end_time"] is None
     assert response.data["permissions"]["zone"] == parking.zone.number
-    assert response.data["operator"] == operator.name
-    assert response.data["time_start"] == parking.time_start
+    assert response.data["operator"] is None
+    assert response.data["time_start"] is None
 
 
 def test_check_parking_invalid_time_parking(operator, enforcer, enforcer_api_client, history_parking_factory):
@@ -379,6 +379,7 @@ def test_check_parking_valid_parking_with_permit_details(enforcer_api_client, pa
     assert len(response.data["permissions"]["permits"]) == 1
     assert response.data["permissions"]["permits"][0]["subjects"] == permit_1.subjects
     assert response.data["permissions"]["permits"][0]["areas"] == permit_1.areas
+    assert response.data["permissions"]["zone"] == parking.zone.number
     assert response.data["time_start"] == parking.time_start
     assert response.data["operator"] == parking.operator.name
 

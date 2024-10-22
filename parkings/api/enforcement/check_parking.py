@@ -99,10 +99,10 @@ class CheckParking(generics.GenericAPIView):
         operator_detail, time_start_detail, permissions_detail = get_details(params)
 
         if operator_detail:
-            result["operator"] = parking.operator.name if parking and parking.operator else None
+            result["operator"] = parking.operator.name if allowed and parking and parking.operator else None
 
         if time_start_detail:
-            result["time_start"] = parking.time_start if parking and parking.time_start else None
+            result["time_start"] = parking.time_start if allowed and parking and parking.time_start else None
 
         if permissions_detail:
             if isinstance(parking, EventParking):
@@ -225,8 +225,9 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
 
     for parking in active_parkings:
         if parking.zone.number > zone:
-            return (None, parking, parking.time_end, permit_lookup_item_qs)
+            return (None, parking, None, permit_lookup_item_qs)
 
+    # move up
     active_event_parking = (
         EventParking.objects
         .registration_number_like(registration_number)
