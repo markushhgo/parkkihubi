@@ -54,6 +54,13 @@ GEOM_2 = [
     (26.8, 64.1),  # South West corner
 ]
 
+GEOM_3 = [
+    (23.8, 64.3),  # North West corner
+    (24.0, 64.3),  # North East corner
+    (24.0, 64.1),  # South East corner
+    (23.8, 64.1),  # South West corner
+]
+
 
 def create_permit_area(client=None, domain=None, allowed_user=None, identifier="A", name="Kamppi", geom=None):
     assert client or (domain and allowed_user)
@@ -178,8 +185,8 @@ def test_check_event_parking_parked_in_wrong_event_area_include_details(
 
 def test_check_parking_not_allowed_parking_and_event_parking_permission_details(
         enforcer_api_client, event_parking_factory, operator, enforcer, event_area_factory, parking_factory):
-    # In this theoretical case, the registration number has an active parking and active event parking,
-    # but it is parked outside the active zone and event area.
+    # In this very improbable scenario, the registration number has an active parking and active event parking,
+    # but the vehicle is parked outside the active zone and event area.
     event_area = event_area_factory.create(geom=create_area_geom(geom=GEOM_2), domain=enforcer.enforced_domain)
     event_parking_factory(registration_number="ABC-123",
                           domain=enforcer.enforced_domain, event_area=event_area)
@@ -194,6 +201,60 @@ def test_check_parking_not_allowed_parking_and_event_parking_permission_details(
     assert response.data["allowed"] is False
     assert response.data["permissions"]["event_areas"] == [event_area.origin_id]
     assert response.data["permissions"]["zones"] == [parking.zone.number]
+    assert response.data["operator"] is None
+    assert response.data["time_start"] is None
+
+
+def test_check_parking_not_allowed_multiple_active_parkings_and_permits_permissions_details(
+    enforcer_api_client,
+    event_parking_factory,
+    operator, enforcer,
+    event_area_factory,
+    parking_factory
+):
+    # In this very improbable scenario, the registration number has two active event parkings, active parkings
+    # and permits, but the vehicle is parked outside its active parkings and permits.
+    event_area_1 = event_area_factory.create(geom=create_area_geom(geom=GEOM_3), domain=enforcer.enforced_domain)
+    event_parking_factory(registration_number="ABC-123",
+                          domain=enforcer.enforced_domain, event_area=event_area_1)
+    event_area_2 = event_area_factory.create(geom=create_area_geom(geom=GEOM_2), domain=enforcer.enforced_domain)
+    event_parking_factory(registration_number="ABC-123",
+                          domain=enforcer.enforced_domain, event_area=event_area_2)
+
+    zone_1 = create_payment_zone(domain=enforcer.enforced_domain)
+    zone_2 = create_payment_zone(geom=create_area_geom(geom=GEOM_2), number=2,
+                                 code="2", domain=enforcer.enforced_domain)
+    zone_3 = create_payment_zone(geom=create_area_geom(geom=GEOM_3), number=3,
+                                 code="3", domain=enforcer.enforced_domain)
+    parking_factory(registration_number="ABC-123", operator=operator, zone=zone_2, domain=zone_1.domain)
+    parking_factory(registration_number="ABC-123", operator=operator, zone=zone_3, domain=zone_2.domain)
+
+    create_permit_area(enforcer_api_client, geom=create_area_geom(geom=GEOM_2))
+    create_permit_area(enforcer_api_client, identifier="B", name="Kauppatori", geom=create_area_geom(geom=GEOM_3))
+
+    permit_1 = create_permit(domain=enforcer_api_client.enforcer.enforced_domain,
+                             start_time=timezone.now() - datetime.timedelta(days=1))
+    permit_2 = create_permit(domain=enforcer_api_client.enforcer.enforced_domain, area="B",
+                             start_time=timezone.now() - datetime.timedelta(days=1))
+
+    data = deepcopy(PARKING_DATA)
+    data["details"] = ["time_start", "operator", "permissions"]
+    response = enforcer_api_client.post(list_url, data=data)
+
+    assert response.status_code == HTTP_200_OK
+    assert response.data["allowed"] is False
+    assert response.data["location"]["payment_zone"] == zone_1.number
+    assert len(response.data["permissions"]["event_areas"]) == 2
+    assert event_area_1.origin_id in response.data["permissions"]["event_areas"]
+    assert event_area_2.origin_id in response.data["permissions"]["event_areas"]
+    assert len(response.data["permissions"]["zones"]) == 2
+    assert zone_2.number in response.data["permissions"]["zones"]
+    assert zone_3.number in response.data["permissions"]["zones"]
+    assert len(response.data["permissions"]["permits"]) == 2
+    assert response.data["permissions"]["permits"][0]["subjects"] == permit_1.subjects
+    assert response.data["permissions"]["permits"][0]["areas"] == permit_1.areas
+    assert response.data["permissions"]["permits"][1]["subjects"] == permit_2.subjects
+    assert response.data["permissions"]["permits"][1]["areas"] == permit_2.areas
     assert response.data["operator"] is None
     assert response.data["time_start"] is None
 
