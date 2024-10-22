@@ -118,15 +118,11 @@ class CheckParking(generics.GenericAPIView):
 
         if permissions_detail:
             result["permissions"] = {
-                "zones": [
-                    p.zone.number for p in active_parkings
-                ],
+                "zones": list({p.zone.number for p in active_parkings}),
                 "permits": [
                     PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items
                 ],
-                "event_areas": [
-                    e_p.event_area.origin_id for e_p in active_event_parkings
-                ]
+                "event_areas": list({e_p.event_area.origin_id for e_p in active_event_parkings})
             }
 
         filter = {
