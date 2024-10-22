@@ -125,7 +125,7 @@ def test_check_parking_allowed_event_parking_details(
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is True
     assert response.data["end_time"] == event_parking.time_end
-    assert response.data["permissions"]["event_area"] == event_area.origin_id
+    assert response.data["permissions"]["event_areas"][0] == event_area.origin_id
     assert response.data["operator"] == event_parking.operator.name
     assert response.data["time_start"] == event_parking.time_start
     assert ParkingCheck.objects.filter(
@@ -143,7 +143,7 @@ def test_check_parking_not_allowed_event_parking_details(
     assert response.status_code == HTTP_200_OK
     assert response.data["allowed"] is False
     assert response.data["end_time"] is None
-    assert response.data["permissions"]["event_area"] is None
+    assert response.data["permissions"]["event_areas"] == []
     assert response.data["permissions"]["zone"] is None
     assert response.data["operator"] is None
     assert response.data["time_start"] is None
@@ -167,7 +167,8 @@ def test_check_event_parking_parked_in_wrong_event_area_include_details(
     assert response.data["location"]["event_area"] == event_area_2.id
     assert response.data["allowed"] is False
     assert response.data["end_time"] is None
-    assert response.data["permissions"]["event_area"] == event_area_1.origin_id
+    assert len(response.data["permissions"]["event_areas"]) == 1
+    assert event_area_1.origin_id in response.data["permissions"]["event_areas"]
     assert response.data["permissions"]["zone"] is None
     assert response.data["operator"] is None
     assert response.data["time_start"] is None
@@ -259,7 +260,7 @@ def test_check_parking_details_permissions_parameter(operator, enforcer, enforce
 
     assert response.status_code == HTTP_200_OK
     assert response.data["permissions"]["zone"] == parking.zone.number
-    assert response.data["permissions"]["event_area"] is None
+    assert response.data["permissions"]["event_areas"] == []
     assert response.data["allowed"] is True
     assert response.data["end_time"] == parking.time_end
 
@@ -336,7 +337,7 @@ def test_check_parking_valid_parking_permit_details(enforcer_api_client, staff_u
     assert response.data["operator"] is None
     assert response.data["time_start"] is None
     assert response.data["permissions"]["zone"] is None
-    assert response.data["permissions"]["event_area"] is None
+    assert response.data["permissions"]["event_areas"] == []
     assert len(response.data["permissions"]["permits"]) == 1
     assert response.data["permissions"]["permits"][0]["subjects"] == permit.subjects
     assert response.data["permissions"]["permits"][0]["areas"] == permit.areas
