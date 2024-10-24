@@ -122,7 +122,7 @@ class CheckParking(generics.GenericAPIView):
                 "permits": [
                     PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items
                 ],
-                "event_areas": list({e_p.event_area.origin_id for e_p in active_event_parkings})
+                "event_areas": list({e_p.event_area.id for e_p in active_event_parkings})
             }
 
         filter = {
