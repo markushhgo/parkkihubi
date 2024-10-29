@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 
 import django
+import environ
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext, gettext_lazy
 from environ import Env
@@ -22,7 +23,10 @@ assert os.path.isfile(os.path.join(BASE_DIR, 'manage.py'))
 #####################
 # Local environment #
 #####################
-env = Env()
+env = environ.Env(
+    ALLOWED_HOSTS=(list, []),
+    CSRF_TRUSTED_ORIGINS = (list, [])
+)
 env_file = os.path.join(BASE_DIR, '.env')
 if os.path.exists(env_file):
     env.read_env(env_file)
@@ -33,7 +37,8 @@ if os.path.exists(env_file):
 DEBUG = env.bool('DEBUG', default=False)
 TIER = env.str('TIER', default='dev')
 SECRET_KEY = env.str('SECRET_KEY', default=('' if not DEBUG else 'xxx'))
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = env("ALLOWED_HOSTS")
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 
 #########
 # Paths #
