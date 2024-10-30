@@ -39,6 +39,7 @@ TIER = env.str('TIER', default='dev')
 SECRET_KEY = env.str('SECRET_KEY', default=('' if not DEBUG else 'xxx'))
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
+USE_X_FORWARDED_HOST = True
 
 #########
 # Paths #
