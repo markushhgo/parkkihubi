@@ -6,7 +6,8 @@ from rest_framework import serializers, viewsets
 
 from ...models import Parking
 from .permissions import IsEnforcer
-from .utils import get_grace_duration
+from .utils import (
+    get_event_parkings_in_assigned_event_areas, get_grace_duration)
 
 
 class ValidSerializer(serializers.ModelSerializer):
@@ -123,6 +124,7 @@ class ValidParkingFilter(ValidFilter):
 
 class ValidViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsEnforcer]
+    model = None
 
     class Meta:
         abstract = True
@@ -140,7 +142,6 @@ class ValidViewSet(viewsets.ReadOnlyModelViewSet):
         with the PARKKIHUBI_TIME_OLD_PARKINGS_VISIBLE setting.
         """
         filtered_queryset = super().filter_queryset(queryset)
-
         if filtered_queryset:
             return filtered_queryset
 
@@ -173,7 +174,10 @@ class ValidViewSet(viewsets.ReadOnlyModelViewSet):
         return filter_backend.get_filterset(self.request, queryset, self)
 
     def get_queryset(self):
-        return super().get_queryset().filter(domain=self.request.user.enforcer.enforced_domain)
+        queryset = super().get_queryset().filter(domain=self.request.user.enforcer.enforced_domain)
+        if self.__class__.__name__ == "ValidEventParkingViewSet":
+            queryset = queryset.filter(id__in=get_event_parkings_in_assigned_event_areas(self.queryset))
+        return queryset
 
 
 class ValidParkingViewSet(ValidViewSet):

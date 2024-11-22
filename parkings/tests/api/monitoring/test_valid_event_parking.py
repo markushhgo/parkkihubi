@@ -1,9 +1,14 @@
 import pytest
+from django.contrib.gis.geos import Point
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.status import (
     HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN, HTTP_405_METHOD_NOT_ALLOWED)
 
+from parkings.api.monitoring.region import WGS84_SRID
+
+from ..enforcement.test_check_parking import (
+    GEOM_2, PARKING_DATA, PARKING_DATA_2, create_area_geom)
 from ..utils import ALL_METHODS, check_method_status_codes
 
 list_url = reverse('monitoring:v1:valid_event_parking-list')
@@ -32,7 +37,9 @@ def test_disallowed_methods(monitoring_api_client, event_parking, kind):
         monitoring_api_client, [url], methods, HTTP_405_METHOD_NOT_ALLOWED)
 
 
-def test_list_endpoint_data(monitoring_api_client, event_parking):
+def test_list_endpoint_data(monitoring_api_client, event_parking, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=monitoring_api_client.monitor.domain)
+    event_parking.event_area = event_area
     event_parking.domain = monitoring_api_client.monitor.domain
     event_parking.save()
 
@@ -45,6 +52,26 @@ def test_list_endpoint_data(monitoring_api_client, event_parking):
     assert result.data['previous'] is None
     assert result.data['count'] == 1
     assert len(result.data['features']) == 1
+    parking_feature = result.data['features'][0]
+    check_parking_feature_shape(parking_feature)
+    check_parking_feature_matches_parking_object(parking_feature, event_parking)
+
+
+def test_list_endpoint_event_parking_not_in_assigned_event_area(
+        monitoring_api_client, event_parking, event_area_factory):
+    event_area = event_area_factory.create(geom=create_area_geom(), domain=monitoring_api_client.monitor.domain)
+    location = Point(PARKING_DATA_2["location"]["longitude"], PARKING_DATA_2["location"]["latitude"], srid=WGS84_SRID)
+    event_parking.location = location
+    event_parking.domain = monitoring_api_client.monitor.domain
+    event_parking.event_area = event_area
+    event_parking.save()
+    result = monitoring_api_client.get(list_url, data={'time': event_parking.time_start.isoformat()})
+    assert result.data["features"] == []
+    # # Test with location inside the event area
+    location = Point(PARKING_DATA["location"]["longitude"], PARKING_DATA["location"]["latitude"], srid=WGS84_SRID)
+    event_parking.location = location
+    event_parking.save()
+    result = monitoring_api_client.get(list_url, data={'time': event_parking.time_start.isoformat()})
     parking_feature = result.data['features'][0]
     check_parking_feature_shape(parking_feature)
     check_parking_feature_matches_parking_object(parking_feature, event_parking)
@@ -91,12 +118,18 @@ def iso8601_us(dt):
 
 
 def test_monitor_can_view_only_parkings_from_their_domain(
-        monitoring_api_client, staff_api_client, staff_user, event_parking_factory, monitor_factory
+        monitoring_api_client, staff_api_client, staff_user, event_parking_factory, monitor_factory, event_area_factory
 ):
     monitor_factory(user=staff_user)
+    event_area_1 = event_area_factory.create(geom=create_area_geom(), domain=monitoring_api_client.monitor.domain)
+    event_area_2 = event_area_factory.create(geom=create_area_geom(geom=GEOM_2), domain=staff_user.monitor.domain)
 
-    parking_1 = event_parking_factory(domain=monitoring_api_client.monitor.domain)
-    parking_2 = event_parking_factory(domain=staff_user.monitor.domain)
+    location_1 = Point(PARKING_DATA["location"]["longitude"], PARKING_DATA["location"]["latitude"], srid=WGS84_SRID)
+    location_2 = Point(PARKING_DATA_2["location"]["longitude"], PARKING_DATA_2["location"]["latitude"], srid=WGS84_SRID)
+
+    parking_1 = event_parking_factory(domain=monitoring_api_client.monitor.domain,
+                                      event_area=event_area_1, location=location_1)
+    parking_2 = event_parking_factory(domain=staff_user.monitor.domain, event_area=event_area_2, location=location_2)
 
     result_1 = monitoring_api_client.get(list_url, data={'time': iso8601(timezone.now())})
     result_2 = staff_api_client.get(list_url, data={'time': iso8601(timezone.now())})
