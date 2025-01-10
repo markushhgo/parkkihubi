@@ -2,9 +2,9 @@ import pytest
 from pytest_factoryboy import register
 
 from parkings.factories import (
-    AdminUserFactory, CompleteEventParkingFactory, DiscParkingFactory,
-    EnforcementDomainFactory, EnforcerFactory, EventAreaFactory,
-    EventAreaStatisticsFactory, EventParkingFactory,
+    AdminUserFactory, CompleteEventParkingFactory, DataUserFactory,
+    DiscParkingFactory, EnforcementDomainFactory, EnforcerFactory,
+    EventAreaFactory, EventAreaStatisticsFactory, EventParkingFactory,
     HistoryEventParkingFactory, HistoryParkingFactory, MonitorFactory,
     OperatorFactory, ParkingAreaFactory, ParkingFactory, RegionFactory,
     StaffUserFactory, UserFactory)
@@ -26,6 +26,7 @@ register(DiscParkingFactory, 'disc_parking')
 register(EnforcementDomainFactory, 'enforcement_domain')
 register(EnforcerFactory)
 register(MonitorFactory)
+register(DataUserFactory)
 
 
 @pytest.fixture(autouse=True)

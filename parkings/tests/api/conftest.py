@@ -15,6 +15,20 @@ def api_client():
 
 
 @pytest.fixture()
+def data_user(data_user_factory, user_factory):
+    user = user_factory()
+    return data_user_factory(user=user)
+
+
+@pytest.fixture
+def data_user_api_client(data_user):
+    api_client = APIClient()
+    token_authenticate(api_client, data_user.user)
+    api_client.data_user = data_user
+    return api_client
+
+
+@pytest.fixture()
 def monitor(monitor_factory, user_factory):
     user = user_factory()
     return monitor_factory(user=user)
