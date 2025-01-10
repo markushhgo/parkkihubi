@@ -1,3 +1,4 @@
+from .data_user import DataUser
 from .enforcement_domain import EnforcementDomain, Enforcer
 from .event_area import EventArea, EventAreaStatistics
 from .event_parking import EventParking
@@ -15,6 +16,7 @@ from .zone import PaymentZone
 
 __all__ = [
     'ArchivedParking',
+    'DataUser',
     'EnforcementDomain',
     'Enforcer',
     'EventArea',
