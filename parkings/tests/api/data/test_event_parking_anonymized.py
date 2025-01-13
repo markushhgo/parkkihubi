@@ -44,13 +44,27 @@ def test_get_list_data_is_anonymized(data_user_api_client, event_parking):
 
 def test_filter_time_start(data_user_api_client, event_parking):
     time_start_str = datetime.strftime(event_parking.time_start + timedelta(hours=1), '%Y-%m-%dT%H:%M:%S.%fZ')
-    data = get(data_user_api_client, list_url + f'?time_start__gt={time_start_str}')
+    data = get(data_user_api_client, list_url + f'?time_start__gte={time_start_str}')
     assert data['count'] == 0
-    data = get(data_user_api_client, list_url + f'?time_start__lt={time_start_str}')
+    data = get(data_user_api_client, list_url + f'?time_start__lte={time_start_str}')
     assert data['count'] == 1
 
     time_start_str = datetime.strftime(event_parking.time_start - timedelta(hours=1), '%Y-%m-%dT%H:%M:%S.%fZ')
-    data = get(data_user_api_client, list_url + f'?time_start__gt={time_start_str}')
+    data = get(data_user_api_client, list_url + f'?time_start__gte={time_start_str}')
     assert data['count'] == 1
-    data = get(data_user_api_client, list_url + f'?time_start__lt={time_start_str}')
+    data = get(data_user_api_client, list_url + f'?time_start__lte={time_start_str}')
+    assert data['count'] == 0
+
+
+def test_filter_time_end(data_user_api_client, event_parking):
+    time_end_str = datetime.strftime(event_parking.time_end + timedelta(hours=1), '%Y-%m-%dT%H:%M:%S.%fZ')
+    data = get(data_user_api_client, list_url + f'?time_end__gte={time_end_str}')
+    assert data['count'] == 0
+    data = get(data_user_api_client, list_url + f'?time_end__lte={time_end_str}')
+    assert data['count'] == 1
+
+    time_end_str = datetime.strftime(event_parking.time_end - timedelta(hours=1), '%Y-%m-%dT%H:%M:%S.%fZ')
+    data = get(data_user_api_client, list_url + f'?time_end__gte={time_end_str}')
+    assert data['count'] == 1
+    data = get(data_user_api_client, list_url + f'?time_end__lte={time_end_str}')
     assert data['count'] == 0

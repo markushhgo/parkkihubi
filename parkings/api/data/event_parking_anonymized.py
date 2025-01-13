@@ -14,7 +14,8 @@ class EventParkingAnonymizedFilterSet(django_filters.FilterSet):
     class Meta:
         model = EventParking
         fields = {
-            'time_start': ['lt', 'gt'],
+            'time_start': ['lte', 'gte'],
+            'time_end': ['lte', 'gte'],
         }
 
 
