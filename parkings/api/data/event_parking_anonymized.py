@@ -28,7 +28,7 @@ class EventParkingAnonymizedSerializer(serializers.ModelSerializer):
 
 class EventParkingAnonymizedViewSet(viewsets.ReadOnlyModelViewSet):
 
-    queryset = EventParking.objects.all()
+    queryset = EventParking.objects.all().order_by('-time_start')
     serializer_class = EventParkingAnonymizedSerializer
     pagination_class = Pagination
     permission_classes = [IsDataUser]

@@ -27,7 +27,7 @@ class ParkingAnonymizedSerializer(serializers.ModelSerializer):
 
 class ParkingAnonymizedViewSet(viewsets.ReadOnlyModelViewSet):
 
-    queryset = Parking.objects.all()
+    queryset = Parking.objects.all().order_by('-time_start')
     serializer_class = ParkingAnonymizedSerializer
     pagination_class = Pagination
     permission_classes = [IsDataUser]
