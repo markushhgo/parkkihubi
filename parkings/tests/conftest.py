@@ -6,12 +6,13 @@ from parkings.factories import (
     DiscParkingFactory, EnforcementDomainFactory, EnforcerFactory,
     EventAreaFactory, EventAreaStatisticsFactory, EventParkingFactory,
     HistoryEventParkingFactory, HistoryParkingFactory, MonitorFactory,
-    OperatorFactory, ParkingAreaFactory, ParkingFactory, RegionFactory,
-    StaffUserFactory, UserFactory)
+    OperatorFactory, ParkingAreaFactory, ParkingCheckFactory, ParkingFactory,
+    RegionFactory, StaffUserFactory, UserFactory)
 
 register(OperatorFactory)
 register(ParkingFactory, 'parking')
 register(EventAreaFactory, 'event_area')
+register(ParkingCheckFactory, 'parking_check')
 register(EventAreaStatisticsFactory, 'event_area_statistics')
 register(EventParkingFactory, 'event_parking')
 register(CompleteEventParkingFactory, 'complete_event_parking')
