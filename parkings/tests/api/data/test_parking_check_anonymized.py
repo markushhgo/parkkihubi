@@ -52,7 +52,7 @@ def test_filter_time(data_user_api_client, parking_check):
 
 
 def test_paginator(data_user_api_client, parking_check_factory):
-    page_size = min(DataPagination.page_size, 10)
+    page_size = min(DataPagination.page_size, 5)
     parking_check_factory.create_batch(page_size)
     data = get(data_user_api_client, list_url + f"?page_size={page_size}")
     assert data['count'] == page_size
