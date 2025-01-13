@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import pytest
 from django.urls import reverse
 
+from parkings.pagination import DataPagination
+
 from ..utils import (
     check_list_endpoint_base_fields, check_method_status_codes, get)
 
@@ -13,14 +15,9 @@ ITEM_KEYS = {'id', 'created_at', 'modified_at', 'location', 'location_gk25fin', 
              'terminal'}
 
 
-def get_detail_url(obj):
-    return reverse('data:v1:parking_anonymized-detail', kwargs={'pk': obj.pk})
-
-
 def test_disallowed_methods(data_user_api_client, parking):
     disallowed_methods = ('post', 'put', 'patch', 'delete')
-    urls = (list_url, get_detail_url(parking))
-    check_method_status_codes(data_user_api_client, urls, disallowed_methods, 405)
+    check_method_status_codes(data_user_api_client, list_url, disallowed_methods, 405)
 
 
 def test_unauthorized_list(api_client, parking):
@@ -55,3 +52,15 @@ def test_filter_time_start(data_user_api_client, parking):
     assert data['count'] == 1
     data = get(data_user_api_client, list_url + f'?time_start__lte={time_start_str}')
     assert data['count'] == 0
+
+
+def test_paginator(data_user_api_client, parking_factory):
+    page_size = min(DataPagination.page_size, 5)
+    parking_factory.create_batch(page_size)
+    data = get(data_user_api_client, list_url + f"?page_size={page_size}")
+    assert data['count'] == page_size
+    assert data['next'] is None
+    assert data['previous'] is None
+    data = get(data_user_api_client, list_url + "?page=2&page_size=2")
+    assert data['next'] is not None
+    assert data['previous'] is not None

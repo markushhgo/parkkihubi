@@ -1,10 +1,10 @@
 
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import serializers, viewsets
+from rest_framework import mixins, serializers, viewsets
 
 from parkings.models import EventParking
-from parkings.pagination import Pagination
+from parkings.pagination import DataPagination
 
 from .permissions import IsDataUser
 
@@ -26,11 +26,11 @@ class EventParkingAnonymizedSerializer(serializers.ModelSerializer):
         exclude = ['registration_number', 'normalized_reg_num']
 
 
-class EventParkingAnonymizedViewSet(viewsets.ReadOnlyModelViewSet):
+class EventParkingAnonymizedViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     queryset = EventParking.objects.all().order_by('-time_start')
     serializer_class = EventParkingAnonymizedSerializer
-    pagination_class = Pagination
+    pagination_class = DataPagination
     permission_classes = [IsDataUser]
     filter_backends = [DjangoFilterBackend]
     filterset_class = EventParkingAnonymizedFilterSet
