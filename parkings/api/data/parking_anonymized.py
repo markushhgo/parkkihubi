@@ -1,7 +1,7 @@
 
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import serializers, viewsets
+from rest_framework import mixins, serializers, viewsets
 
 from parkings.models import Parking
 from parkings.pagination import DataPagination
@@ -25,7 +25,7 @@ class ParkingAnonymizedSerializer(serializers.ModelSerializer):
         exclude = ['registration_number', 'normalized_reg_num']
 
 
-class ParkingAnonymizedViewSet(viewsets.ReadOnlyModelViewSet):
+class ParkingAnonymizedViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
     queryset = Parking.objects.all().order_by('-time_start')
     serializer_class = ParkingAnonymizedSerializer
