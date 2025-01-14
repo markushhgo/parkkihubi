@@ -105,7 +105,7 @@ components:
         time_start: "2020-04-15T11:10:05Z"
         time_end: "2020-04-15T14:00:00Z"
         operator: "63f8374e-1eed-44fa-9224-4cd0c64ddf35"
-        operator_name: "Foobar Eent Parkings"
+        operator_name: "Foobar Event Parkings"
         event_area: "cdb91cd2-88b0-4869-9c93-4df4fad28a33"
       properties:
         id:
@@ -444,6 +444,13 @@ paths:
                           permit area in the system.
                         type: string
                         maxLength: 10
+                        nullable: true
+                      event_area:
+                        description: >-
+                          Event Area found by the provided location,
+                          or null if the provided location is not in any
+                          event area in the system.
+                        type: string
                         nullable: true
                   time:
                     description: >-
