@@ -109,7 +109,7 @@ strategy:
     modified_at: null
     name: null
     user_id: null
-  parkings_data_user:
+  parkings_datauser:
     created_at: null
     id: null
     modified_at: null
