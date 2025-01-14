@@ -6,6 +6,7 @@ docs="
 api/enforcement
 api/operator
 api/public
+api/data
 "
 
 docs_dir=$(cd "$(dirname "$0")" && pwd)/docs
