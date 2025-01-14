@@ -10,8 +10,6 @@ servers:
   - url: http://localhost:8000/data/v1/
     description: Local development server
 
-produces:
-  - application/json
 
 components:
   securitySchemes:
@@ -360,7 +358,7 @@ paths:
     get:
       tags:
         - parking_check_anonymized
-      summary: Endpoint for fetching anonymized parking checkss
+      summary: Endpoint for fetching anonymized parking checks
       security: [{ApiKey: []}]
       parameters:
         - name: page
@@ -387,10 +385,10 @@ paths:
             type: sting
             format: date-time
             example: 2024-12-31T00:00:00
-          description: Return parking check s with time less than or equal to the given datetime string.
+          description: Return parking checks with time less than or equal to the given datetime string.
       responses:
         '200':
-          description: List of anonymized parking checkss
+          description: List of anonymized parking checks
           content:
             application/json:
               schema:
