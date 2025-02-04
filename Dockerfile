@@ -16,6 +16,7 @@ RUN apt-get update \
         vim \
         zsh \
     && echo '%sudo ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/sudo_nopasswd \
+    && echo "root:Docker!" | chpasswd \
     && apt-get install --yes --no-install-recommends \
         gdal-bin \
         python3 \
@@ -35,14 +36,22 @@ RUN apt-get update \
         python3-socks \
         python3-urllib3 \
         python3-venv \
-        python3-wheel
+        python3-wheel \
+        gettext \
+        uwsgi \
+        uwsgi-plugin-python3 \
+        dialog \
+        openssh-server \
+    && ln -s /usr/bin/pip3 /usr/local/bin/pip \
+    && ln -s /usr/bin/python3 /usr/local/bin/python \
+    && apt-get clean
+
+# Enable SSH
+COPY sshd_config /etc/ssh/
 
 RUN dpkg-reconfigure locales
 RUN useradd -m -u 1000 bew
-RUN usermod -aG sudo -s /usr/bin/zsh bew
-COPY zshrc /home/bew/.zshrc
-COPY bashrc /home/bew/.bashrc
-RUN chown -R bew:bew /home/bew
+
 
 USER bew
 ENV USER=bew
@@ -51,14 +60,16 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_CTYPE en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
-WORKDIR /home/bew/bew
 
-COPY --chown=bew:bew . /home/bew/bew/
+WORKDIR /parkkihub
+COPY --chown=bew:bew . .
+RUN chmod a+x ./azure-docker-entrypoint.sh
+RUN chmod a+x ./manage.py
 
 RUN python3.10 -m venv --system-site-packages /home/bew/.venv
-RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements.txt
-RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements-dev.txt
-RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements-test.txt
-RUN /home/bew/.venv/bin/pip3 install -r /home/bew/bew/requirements-style.txt
+RUN pip3 install -r ./requirements.txt
+RUN pip3 install -r ./requirements-dev.txt
+RUN pip3 install -r ./requirements-test.txt
+RUN pip3 install -r ./requirements-style.txt
 
-CMD /bin/zsh
+ENTRYPOINT ["./azure-docker-entrypoint.sh"]
