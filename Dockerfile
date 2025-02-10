@@ -53,7 +53,6 @@ RUN dpkg-reconfigure locales
 RUN useradd -m -u 1000 bew
 
 
-USER bew
 ENV USER=bew
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV LANG en_US.UTF-8
@@ -65,6 +64,8 @@ WORKDIR /parkkihub
 COPY --chown=bew:bew . .
 RUN chmod a+x ./azure-docker-entrypoint.sh
 RUN chmod a+x ./manage.py
+
+EXPOSE 8000 2222
 
 RUN python3.10 -m venv --system-site-packages /home/bew/.venv
 RUN pip3 install -r ./requirements.txt

@@ -47,7 +47,7 @@ param secretKey string = ''
 
 param apiAppSettings object = {
   USE_X_FORWARDED_HOST: true
-  EMAIL_URL: 'smtp://smtp.turku.fi:25'
+  EMAIL_URL: 'smtp://smtp.turku.fi:587'
   ENABLE_SSH: 'true'
   MEDIA_ROOT: '/fileshare/mediaroot'
   MEDIA_URL: '/media/'
