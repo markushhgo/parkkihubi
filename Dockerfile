@@ -52,7 +52,6 @@ COPY sshd_config /etc/ssh/
 RUN dpkg-reconfigure locales
 RUN useradd -m -u 1000 bew
 
-
 ENV USER=bew
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV LANG en_US.UTF-8

@@ -13,6 +13,8 @@ su -s /bin/bash bew --command "exec uwsgi --plugin http,python3 --master --http 
             --static-map /=${STATIC_ROOT} \
             --static-map /dashboard=/fileshare/dashboard \
             --static-map /docs=/fileshare/docs/api \
+            --static-index index.html \
+            --static-index index.htm \
             --need-app \
             --mount ${URL_PREFIX:-/}=parkkihubi/wsgi.py \
             --manage-script-name \

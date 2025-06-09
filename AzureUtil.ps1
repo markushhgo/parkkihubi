@@ -81,8 +81,6 @@ function Import-AzurePostgresDbDump($dumpFile) {
     "Importing db dump..."
     $dbPassword = Get-SecretParameter dbPassword
     $env:PGPASSWORD = Get-SecretParameter dbAdminPassword
-    Write-Output "$env:PGPASSWORD"
-    Write-Output "CREATE USER ""$dbUser"" WITH ENCRYPTED PASSWORD '$dbPassword'; ALTER USER ""$dbUser"" CREATEDB; GRANT ""$dbUser"" TO $dbAdminUser; GRANT ALL ON SCHEMA public TO ""$dbUser"";"
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -c "CREATE USER ""$dbUser"" WITH ENCRYPTED PASSWORD '$dbPassword'; ALTER USER ""$dbUser"" CREATEDB; GRANT ""$dbUser"" TO $dbAdminUser; GRANT ALL ON SCHEMA public TO ""$dbUser"";"
     psql -h "$db.postgres.database.azure.com" -U $dbAdminUser -d $dbDatabase -f $dumpFile
     "Done"
