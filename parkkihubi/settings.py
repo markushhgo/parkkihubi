@@ -2,9 +2,9 @@ import os
 from datetime import timedelta
 
 import django
-import environ
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext, gettext_lazy
+from environ import Env
 from raven import fetch_git_sha
 from raven.exceptions import InvalidGitRepository
 
@@ -22,7 +22,7 @@ assert os.path.isfile(os.path.join(BASE_DIR, 'manage.py'))
 #####################
 # Local environment #
 #####################
-env = environ.Env(
+env = Env(
     ALLOWED_HOSTS=(list, []),
     CSRF_TRUSTED_ORIGINS=(list, [])
 )
