@@ -2,10 +2,9 @@ import os
 from datetime import timedelta
 
 import django
+import environ
 from django.utils.encoding import smart_str
 from django.utils.translation import gettext, gettext_lazy
-from environ import Env
-import environ
 from raven import fetch_git_sha
 from raven.exceptions import InvalidGitRepository
 
@@ -25,9 +24,8 @@ assert os.path.isfile(os.path.join(BASE_DIR, 'manage.py'))
 #####################
 env = environ.Env(
     ALLOWED_HOSTS=(list, []),
-    CSRF_TRUSTED_ORIGINS = (list, [])
+    CSRF_TRUSTED_ORIGINS=(list, [])
 )
-env = Env()
 env_file = os.path.join(BASE_DIR, '.env')
 if os.path.exists(env_file):
     env.read_env(env_file)
@@ -42,7 +40,6 @@ ALLOWED_HOSTS = env("ALLOWED_HOSTS")
 CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS")
 USE_X_FORWARDED_HOST = True
 
-
 #########
 # Paths #
 #########
@@ -50,7 +47,6 @@ MEDIA_ROOT = env("MEDIA_ROOT")
 MEDIA_URL = '/media/'
 ROOT_URLCONF = 'parkkihubi.urls'
 STATIC_ROOT = env("STATIC_ROOT")
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticroot')
 STATIC_URL = '/static/'
 
 ############
