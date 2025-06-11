@@ -43,10 +43,10 @@ USE_X_FORWARDED_HOST = True
 #########
 # Paths #
 #########
-MEDIA_ROOT = env("MEDIA_ROOT")
+MEDIA_ROOT = env("MEDIA_ROOT", default='')
 MEDIA_URL = '/media/'
 ROOT_URLCONF = 'parkkihubi.urls'
-STATIC_ROOT = env("STATIC_ROOT")
+STATIC_ROOT = env("STATIC_ROOT", default='')
 STATIC_URL = '/static/'
 
 ############
