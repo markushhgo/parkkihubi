@@ -6,6 +6,7 @@ from rest_framework import viewsets
 
 from ...models import Parking
 from ..common import WGS84InBBoxFilter
+from ..enforcement.utils import get_event_parkings_in_assigned_event_areas
 from .permissions import IsMonitor
 from .serializers import ParkingSerializer
 
@@ -42,7 +43,10 @@ class ValidViewSet(viewsets.ReadOnlyModelViewSet):
     bbox_filter_include_overlapping = True
 
     def get_queryset(self):
-        return super().get_queryset().filter(domain=self.request.user.monitor.domain)
+        queryset = super().get_queryset().filter(domain=self.request.user.monitor.domain)
+        if self.__class__.__name__ == "ValidEventParkingViewSet":
+            queryset = queryset.filter(id__in=get_event_parkings_in_assigned_event_areas(self.queryset))
+        return queryset
 
     class Meta:
         abstract = True
