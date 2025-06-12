@@ -52,7 +52,7 @@ jobs:
         uses: codecov/codecov-action@v3
 
   test-dockerization:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v3
 
@@ -65,7 +65,7 @@ jobs:
       - name: Copy default configuration as active
         run: cp -n local_settings.py.tpl_dev local_settings.py
 
-      - name: Start the services with docker compose up
+      - name: Start the services with docker-compose up
         run: docker compose up -d
 
       - name: Run pytest in the app container

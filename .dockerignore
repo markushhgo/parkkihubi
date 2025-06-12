@@ -38,3 +38,8 @@ LICENSE
 README.md
 TODO.md
 var
+.vscode
+AzureUtil.ps1
+*.bicep
+*.bicepparam
+secrets.*

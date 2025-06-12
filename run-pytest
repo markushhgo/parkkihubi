@@ -54,7 +54,7 @@ echo "-------------------------!!!!!!!!!!!!!11--------------"
 ""${docker_compose_exec[@]}"" -e RUN_MIGRATIONS=0 runserver ./docker-entrypoint /bin/true
 
 set +e
-""${docker_compose_exec[@]}"" runserver /home/bew/.venv/bin/pytest "${misc_opts[@]}" "${opts[@]}"
+""${docker_compose_exec[@]}"" runserver /usr/local/bin/pytest "${misc_opts[@]}" "${opts[@]}"
 
 exit_code=$?
 
