@@ -8,10 +8,20 @@ from rest_framework import generics, serializers
 from rest_framework.response import Response
 
 from ...models import (
-    EventArea, EventParking, Parking, ParkingCheck, PaymentZone, PermitArea,
-    PermitLookupItem)
+    EventArea, EventParking, Parking, ParkingCheck, PaymentZone, Permit,
+    PermitArea, PermitLookupItem)
 from ...models.constants import GK25FIN_SRID, WGS84_SRID
 from .permissions import IsEnforcer
+
+
+class PermitPermissionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Permit
+        fields = [
+            "external_id",
+            "subjects",
+            "areas"
+        ]
 
 
 class AwareDateTimeField(serializers.DateTimeField):
@@ -35,6 +45,7 @@ class CheckParkingSerializer(serializers.Serializer):
     registration_number = serializers.CharField(max_length=20)
     location = LocationSerializer()
     time = AwareDateTimeField(required=False)
+    details = serializers.ListSerializer(child=serializers.CharField(), required=False)
 
 
 class CheckParking(generics.GenericAPIView):
@@ -62,7 +73,7 @@ class CheckParking(generics.GenericAPIView):
         area = get_permit_area(gk25_location, domain)
         event_area = get_event_area(gk25_location, domain)
 
-        (allowed_by, parking, end_time) = check_parking(
+        (allowed_by, parking, end_time, active_parkings, permit_lookup_items, active_event_parkings) = check_parking(
             registration_number, zone, area, time, domain, event_area)
         allowed = bool(allowed_by)
 
@@ -71,8 +82,20 @@ class CheckParking(generics.GenericAPIView):
             # one that has just expired, i.e. was valid a few minutes
             # ago (where "a few minutes" is the grace duration)
             past_time = time - get_grace_duration()
-            (_allowed_by, parking, end_time) = check_parking(
-                registration_number, zone, area, past_time, domain, event_area)
+            (
+                _allowed_by,
+                parking,
+                end_time,
+                active_parkings,
+                permit_lookup_items,
+                active_event_parkings
+            ) = check_parking(
+                registration_number,
+                zone, area,
+                past_time,
+                domain,
+                event_area
+            )
 
         result = {
             "allowed": allowed,
@@ -84,6 +107,24 @@ class CheckParking(generics.GenericAPIView):
             },
             "time": time,
         }
+
+        operator_detail, time_start_detail, permissions_detail = get_details(params)
+
+        if operator_detail:
+            result["operator"] = parking.operator.name if allowed and parking and parking.operator else None
+
+        if time_start_detail:
+            result["time_start"] = parking.time_start if allowed and parking and parking.time_start else None
+
+        if permissions_detail:
+            result["permissions"] = {
+                "zones": list({p.zone.number for p in active_parkings}),
+                "permits": [
+                    PermitPermissionsSerializer(item.permit).data for item in permit_lookup_items
+                ],
+                "event_areas": list({e_p.event_area.id for e_p in active_event_parkings})
+            }
+
         filter = {
             "performer": request.user,
             "time": time,
@@ -93,6 +134,7 @@ class CheckParking(generics.GenericAPIView):
             "result": result,
             "allowed": allowed
         }
+
         if isinstance(parking, Parking):
             filter["found_parking"] = parking
         if isinstance(parking, EventParking):
@@ -100,6 +142,22 @@ class CheckParking(generics.GenericAPIView):
 
         ParkingCheck.objects.create(**filter)
         return Response(result)
+
+
+def get_details(params):
+    details = params.get("details", [])
+    operator = False
+    time_start = False
+    permissions = False
+
+    for detail in [d.lower() for d in details]:
+        if detail == "operator":
+            operator = True
+        if detail == "time_start":
+            time_start = True
+        if detail == "permissions":
+            permissions = True
+    return operator, time_start, permissions
 
 
 def get_location(params):
@@ -151,8 +209,15 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
     :type area: str|None
     :type domain: parkings.models.EnforcementDomain
     :type time: datetime.datetime
-    :rtype: (str, Parking|None, datetime.datetime)
+    :rtype: (str, Parking|None, datetime.datetime, ParkingQuerySet, PermitLookupItemQuerySet, EventParkingQuerySet)
     """
+    permit_lookup_items = (
+        PermitLookupItem.objects
+        .active()
+        .by_time(time)
+        .by_subject(registration_number)
+        .filter(permit__domain=domain))
+
     active_parkings = (
         Parking.objects
         .registration_number_like(registration_number)
@@ -160,39 +225,37 @@ def check_parking(registration_number, zone, area, time, domain, event_area):
         .only("id", "zone", "time_end")
         .filter(domain=domain))
 
-    for parking in active_parkings:
-        if zone is None or parking.zone.number <= zone:
-            return ("parking", parking, parking.time_end)
-
-    if area:
-        permit_end_time = (
-            PermitLookupItem.objects
-            .active()
-            .by_time(time)
-            .by_subject(registration_number)
-            .by_area(area)
-            .values_list("end_time", flat=True)
-            .filter(permit__domain=domain)
-            .first())
-
-        if permit_end_time:
-            return ("permit", None, permit_end_time)
-
-    active_event_parking = (
+    active_event_parkings = (
         EventParking.objects
         .registration_number_like(registration_number)
         .valid_at(time)
         .only("id", "time_end")
-        .filter(domain=domain)).first()
+        .filter(domain=domain))
 
-    if active_event_parking:
+    for parking in active_parkings:
+        if zone is None or parking.zone.number <= zone:
+            return ("parking",
+                    parking,
+                    parking.time_end,
+                    active_parkings,
+                    permit_lookup_items,
+                    active_event_parkings)
+
+    if area:
+        permit_end_time = permit_lookup_items.by_area(area).values_list("end_time", flat=True).first()
+        if permit_end_time:
+            return ("permit", None, permit_end_time, active_parkings, permit_lookup_items, active_event_parkings)
+
+    for active_event_parking in active_event_parkings:
         if active_event_parking.event_area == event_area:
-            return ("event parking", active_event_parking, active_event_parking.time_end)
-        else:
-            # Event parking not parked in the assigned event area, i.e., not allowed.
-            return (None, active_event_parking, active_event_parking.time_end)
+            return ("event_parking",
+                    active_event_parking,
+                    active_event_parking.time_end,
+                    active_parkings,
+                    permit_lookup_items,
+                    active_event_parkings)
 
-    return (None, None, None)
+    return (None, None, None, active_parkings, permit_lookup_items, active_event_parkings)
 
 
 def get_grace_duration(default=datetime.timedelta(minutes=15)):

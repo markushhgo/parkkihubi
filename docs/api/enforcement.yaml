@@ -386,6 +386,16 @@ paths:
                     given, defaults to current time.
                   type: string
                   format: date-time
+                details:
+                  description: >-
+                    Optional additional details. Takes as argument a list of preferred details.
+                    The details are: operator, time_start and permissions.
+                  type: array
+                  items:
+                    type: string
+                  default: []
+                  example: ["operator", "time_start", "permissions"]
+
       responses:
         '200':
           description: OK. Validity check succeeded.
@@ -454,11 +464,53 @@ paths:
                         nullable: true
                   time:
                     description: >-
-                      Time used in the check.  It will either be equal
+                      Time used in the check. It will either be equal
                       to the time value provided in the request or the
                       current time if none was provided.
                     type: string
                     format: date-time
+                  operator:
+                    description: >-
+                      If 'operator' in details, returns the operator
+                      of the allowed parking.
+                    type: string
+                    nullable: true
+                  time_start:
+                    description: >-
+                      If 'time_start' in details, returns the time_start
+                      of the allowed parking.
+                    type: string
+                    format: date-time
+                    nullable: true
+                  permissions:
+                    description: >-
+                      If 'permissions' in details, returns the active permissions
+                       for the registration number.
+                    type: object
+                    properties:
+                      event_areas:
+                        description: >-
+                          List of event area IDs to which the registration number has permissions.
+                        type: array
+                        items:
+                          type: string
+                      zones:
+                        description: List of zones to which the registration number has permissions.
+                        type: array
+                        items:
+                          type: integer
+                      permits:
+                        description: List of active permits for the registration number.
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            external_id:
+                              type: string
+                            subjects: &permitSubjects
+                              $ref: '#/components/schemas/PermitSubjects'
+                            targets: &permitAreas
+                                $ref: '#/components/schemas/PermitAreas'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
