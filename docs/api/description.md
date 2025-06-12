@@ -25,6 +25,9 @@ Parkkihubi has four different REST APIs:
   **NOTE!** The public API is on very initial state. Backward
   incompatible changes are possible.
 
+* [Data API](../data/)
+  Data API can be used to fetch anonymized parkings, event parkings and parking checks.
+
 * Monitoring API
 
   Monitoring API can be used to monitor the status of the Parkkihubi.

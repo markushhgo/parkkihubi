@@ -1,0 +1,413 @@
+openapi: 3.0.1
+info:
+  title: Parkkihubi Data API
+  description:
+    $ref: ./description.md
+  version: "1.0.0"
+servers:
+  - url: https://parkki.turku.fi/data/v1/
+    description: Production server
+  - url: http://localhost:8000/data/v1/
+    description: Local development server
+
+
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: |-
+        Requests must have value `ApiKey <your_api_key>` in the
+        `Authorization` header, i.e. the HTTP header should look like:
+
+            Authorization: ApiKey <your_api_key>
+  responses:
+    Unauthorized:  # 401
+      description: Unauthorized access
+  schemas:
+    EventParkingAnonymized:
+      type: object
+      properties:
+        id:
+          description: Unique identifier for the parking
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        modified_at:
+          type: string
+          format: date-time
+        location:
+          $ref: '#/components/schemas/Location'
+        location_gk25fin:
+          $ref: '#/components/schemas/Location_GK25FIN'
+        time_start:
+          $ref: '#/components/schemas/TimeStart'
+        time_end:
+          $ref: '#/components/schemas/TimeEnd'
+        operator:
+          type: string
+        domain:
+          type: integer
+        event_area:
+          type: string
+
+    ParkingAnonymized:
+      type: object
+      properties:
+        id:
+          description: Unique identifier for the parking
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        modified_at:
+          type: string
+          format: date-time
+        location:
+          $ref: '#/components/schemas/Location'
+        location_gk25fin:
+          $ref: '#/components/schemas/Location_GK25FIN'
+        time_start:
+          $ref: '#/components/schemas/TimeStart'
+        time_end:
+          $ref: '#/components/schemas/TimeEnd'
+        terminal_number:
+          type: string
+        is_disc_parking:
+          type: boolean
+        operator:
+          type: string
+        domain:
+          type: integer
+        region:
+          type: string
+        parking_area:
+          type: string
+        terminal:
+          type: string
+        zone:
+          type: integer
+
+    ParkingCheckAnonymized:
+      type: object
+      properties:
+        id:
+          description: Unique identifier for the parking
+          type: string
+          format: uuid
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+        time:
+          type: string
+          format: date-time
+        time_overridden:
+          type : boolean
+        location:
+          $ref: '#/components/schemas/Location'
+        result:
+          type: object
+          properties:
+            time:
+              type: string
+              format: date-time
+            allowed:
+              type: boolean
+            end_time:
+              type: string
+              format: date-time
+            location:
+                type: object
+                properties:
+                  event_area:
+                    type: string
+                  permit_area:
+                    type: string
+                  payment_zone:
+                    type: string
+            operator:
+              type: string
+            time_start:
+              type: string
+              format: date-time
+            permissions:
+              type: object
+              properties:
+                zones:
+                  type: array
+                  items:
+                    type: string
+                permits:
+                  type: array
+                  items:
+                    type: string
+                event_areas:
+                  type: array
+                  items:
+                    type: string
+        allowed:
+          type: boolean
+
+    Location:
+      description: Location
+      type: object
+      example:
+        type: Point
+        coordinates: [24.938466, 60.170014]
+      properties:
+        type:
+          description: Geometry type
+          type: string
+          enum: [Point]
+        coordinates:
+          description: >-
+            An array of coordinates describing the location geometry.
+            The items are WGS84 longitude and latitude in that order.
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+            format: float
+
+    Location_GK25FIN:
+      description: Location in gk25fin projection
+      type: object
+      example:
+        type: Point
+        coordinates: [25496584.0356918, 6673016.304637269]
+      properties:
+        type:
+          description: Geometry type
+          type: string
+          enum: [Point]
+        coordinates:
+          description: >-
+            An array of coordinates describing the location geometry.
+            The items are WGS84 longitude and latitude in that order.
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+            format: float
+
+    TimeStart:
+      description: Start time for the parking
+      type: string
+      format: date-time
+
+    TimeEnd:
+      description: End time for the parking
+      type: string
+      format: date-time
+
+paths:
+  /event_parking_anonymized/:
+    get:
+      tags:
+        - event_parking_anonymized
+      summary: Endpoint for fetching anonymized event parkings
+      security: [{ApiKey: []}]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Pagination page number
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 1000
+          description: Pagination page size
+        - name: time_start__gte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-01-01T00:00:00
+          description: Return event parkings with time_start greater than or equal to the given datetime string.
+        - name: time_start__lte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-12-31T00:00:00
+          description: Return event parkings with time_start less than or equal to the given datetime string.
+        - name: time_end__gte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-01-01T00:00:00
+          description: Return event parkings with time_end greater than or equal to the given datetime string.
+        - name: time_end__lte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-12-31T00:00:00
+          description: Return event parkings with time_end less than or equal to the given datetime string.
+      responses:
+        '200':
+          description: List of anonymized event parkings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    description: Total number of objects
+                    type: integer
+                  next:
+                    description: Link to the next result page
+                    type: string
+                    format: uri
+                  previous:
+                    description: Link to the previous result page
+                    type: string
+                    format: uri
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EventParkingAnonymized'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /parking_anonymized/:
+    get:
+      tags:
+        - parking_anonymized
+      summary: Endpoint for fetching anonymized parkings
+      security: [{ApiKey: []}]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Pagination page number
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 1000
+          description: Pagination page size
+        - name: time_start__gte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-01-01T00:00:00
+          description: Return parkings with time_start greater than or equal to the given datetime string.
+        - name: time_start__lte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-12-31T00:00:00
+          description: Return parkings with time_start less than or equal to the given datetime string.
+        - name: time_end__gte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-01-01T00:00:00
+          description: Return parkings with time_end greater than or equal to the given datetime string.
+        - name: time_end__lte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-12-31T00:00:00
+          description: Return parkings with time_end less than or equal to the given datetime string.
+      responses:
+        '200':
+          description: List of anonymized parkings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    description: Total number of objects
+                    type: integer
+                  next:
+                    description: Link to the next result page
+                    type: string
+                    format: uri
+                  previous:
+                    description: Link to the previous result page
+                    type: string
+                    format: uri
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ParkingAnonymized'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /parking_check_anonymized/:
+    get:
+      tags:
+        - parking_check_anonymized
+      summary: Endpoint for fetching anonymized parking checks
+      security: [{ApiKey: []}]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+          description: Pagination page number
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 1000
+          description: Pagination page size
+        - name: time__gte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-01-01T00:00:00
+          description: Return parking checks with time greater than or equal to the given datetime string.
+        - name: time__lte
+          in: query
+          schema:
+            type: sting
+            format: date-time
+            example: 2024-12-31T00:00:00
+          description: Return parking checks with time less than or equal to the given datetime string.
+      responses:
+        '200':
+          description: List of anonymized parking checks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    description: Total number of objects
+                    type: integer
+                  next:
+                    description: Link to the next result page
+                    type: string
+                    format: uri
+                  previous:
+                    description: Link to the previous result page
+                    type: string
+                    format: uri
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ParkingCheckAnonymized'
+        '401':
+          $ref: '#/components/responses/Unauthorized'

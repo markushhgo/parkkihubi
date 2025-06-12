@@ -5,7 +5,7 @@ from django.db import models
 
 from .admin_utils import ReadOnlyAdmin, WithAreaField
 from .models import (
-    ArchivedParking, EnforcementDomain, Enforcer, EventArea,
+    ArchivedParking, DataUser, EnforcementDomain, Enforcer, EventArea,
     EventAreaStatistics, EventParking, Monitor, Operator, Parking, ParkingArea,
     ParkingCheck, ParkingTerminal, PaymentZone, Permit, PermitArea,
     PermitLookupItem, PermitSeries, Region)
@@ -21,6 +21,11 @@ class EnforcerAdmin(WithAreaField, OSMGeoAdmin):
 class EnforcementDomainAdmin(WithAreaField, OSMGeoAdmin):
     list_display = ['id', 'code', 'name', 'area']
     ordering = ('code',)
+
+
+@admin.register(DataUser)
+class DataUserAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user']
 
 
 @admin.register(Monitor)

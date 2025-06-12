@@ -5,6 +5,10 @@ class Pagination(pagination.PageNumberPagination):
     page_size_query_param = 'page_size'
 
 
+class DataPagination(Pagination):
+    page_size = 1000
+
+
 class CursorPagination(pagination.CursorPagination):
     ordering = '-id'
     page_size = 200

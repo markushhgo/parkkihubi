@@ -1,3 +1,4 @@
+from .data_user import DataUserFactory
 from .enforcement_domain import EnforcementDomainFactory, EnforcerFactory
 from .event_area import EventAreaFactory
 from .event_area_statistics import EventAreaStatisticsFactory
@@ -21,6 +22,7 @@ __all__ = [
     'CompleteEventParkingFactory',
     'CompleteHistoryParkingFactory',
     'CompleteParkingFactory',
+    'DataUserFactory',
     'DiscParkingFactory',
     'EventAreaFactory',
     'EventParkingFactory',

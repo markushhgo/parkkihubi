@@ -109,6 +109,12 @@ strategy:
     modified_at: null
     name: null
     user_id: null
+  parkings_datauser:
+    created_at: null
+    id: null
+    modified_at: null
+    name: null
+    user_id: null
   parkings_parking:
     created_at: null
     domain_id: null

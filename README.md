@@ -120,6 +120,7 @@ file by hand before starting docker-compose environment.
 - `PARKKIHUBI_MONITORING_API_ENABLED` default `True`
 - `PARKKIHUBI_OPERATOR_API_ENABLED` default `True`
 - `PARKKIHUBI_ENFORCEMENT_API_ENABLED` default `True`
+- `PARKKIHUBI_DATA_API_ENABLED`default `True`
 
 ### Running tests
 
@@ -196,23 +197,23 @@ Three possible ways (out of many) to generate the documentation:
 
     Due to [a bug in swagger-codegen](https://github.com/swagger-api/swagger-codegen/pull/4508),
     we're using an unreleased version at the moment.
-    
+
     To build swagger-codegen from source, you need Apache maven installed (you'll
     need java 7 runtime at a minimum):
-    
+
         # Ubuntu
         sudo apt-get install maven
-    
+
     Clone swagger-codegen master branch and build it:
-    
+
         git clone https://github.com/swagger-api/swagger-codegen
         cd swagger-codegen/
         mvn clean package  # Takes a few minutes
-    
+
     The client will now be available at `modules/swagger-codegen-cli/target/swagger-codegen-cli.jar`.
-    
+
     To build the docs, in `parkkihubi` repository root:
-    
+
         cd docs/api
         java -jar /path/to/codegen/swagger-codegen-cli.jar generate \
           -i enforcement.yaml -l html2 -c config.json \
