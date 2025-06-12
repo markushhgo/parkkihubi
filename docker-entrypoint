@@ -5,6 +5,7 @@ set -e
 if [[ "$ENABLE_SSH" = "true" ]]; then
     service ssh start
     eval $(printenv | sed -n "/^PWD=/!s/^\([^=]\+\)=\(.*\)$/export \1=\2/p" | sed 's/"/\\\"/g' | sed '/=/s//="/' | sed 's/$/"/' >> /etc/profile)
+fi
 
 PORT=${DJANGO_PORT:-8000}
 DEBUG_PORT=${DEBUGPY_PORT:-5678}
